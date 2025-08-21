@@ -1,29 +1,61 @@
 {
   "expo": {
-    "name": "PomodoroApp",
-    "slug": "PomodoroApp",
+    "name": "Pomodoro Timer",
+    "slug": "pomodoro-timer-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "statusBarStyle": "light",
+    "statusBarBackgroundColor": "#e74c3c",
     "newArchEnabled": true,
+    "scheme": "pomodoroapp",
+    "description": "A beautiful Pomodoro timer app to boost your productivity with Firebase sync across devices.",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#e74c3c"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pomodorotimer.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "pomodoroapp",
+            "CFBundleURLSchemes": ["pomodoroapp"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#e74c3c"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.pomodorotimer.app",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.VIBRATE",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      "expo-router"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
     }
   }
 }
