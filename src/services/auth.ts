@@ -5,7 +5,8 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithCredential,
-  User
+  User,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { 
   doc, 
@@ -16,26 +17,19 @@ import {
 } from 'firebase/firestore';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import { auth, db } from '../firebase/config';
+import { Platform } from 'react-native';
+import { auth, db } from '../config/firebase';
 import { UserProfile, UserSettings } from '../types';
 
-// Configure WebBrowser for auth session
 WebBrowser.maybeCompleteAuthSession();
 
-// TODO: Replace with your actual Google OAuth configuration for mobile
-// Get these from Firebase Console > Authentication > Sign-in method > Google
-// For iOS: Use the iOS client ID from GoogleService-Info.plist
-// For Android: Use the Android client ID from google-services.json
+// Google OAuth configuration from your Google Services files
 const GOOGLE_OAUTH_CONFIG = {
-  // Use your iOS client ID for iOS builds
-  iosClientId: 'your-ios-client-id.googleusercontent.com',
-  // Use your Android client ID for Android builds  
-  androidClientId: 'your-android-client-id.googleusercontent.com',
-  // For Expo Go development, use Expo's client ID
-  expoClientId: 'your-expo-client-id.googleusercontent.com'
+  iosClientId: '96748369657-95pplni45ck7ur52lh1pa5qv9mni1klh.apps.googleusercontent.com',
+  androidClientId: '96748369657-ofh8d6ehs4nsgfsddbblv3d29rciip3j.apps.googleusercontent.com',
+  expoClientId: '96748369657-10e7bht1ndqgr2n3rj6mqgva5387icqd.apps.googleusercontent.com'
 };
 
-// Default user settings
 const defaultSettings: UserSettings = {
   notifications: true,
   autoStartBreaks: false,
@@ -46,7 +40,6 @@ const defaultSettings: UserSettings = {
   customPresets: {}
 };
 
-// Create or update user profile in Firestore
 export const createUserProfile = async (user: User, additionalData?: any) => {
   if (!user) return;
 
@@ -79,7 +72,6 @@ export const createUserProfile = async (user: User, additionalData?: any) => {
       throw error;
     }
   } else {
-    // Update last active time
     await setDoc(userRef, { 
       lastActiveAt: serverTimestamp() 
     }, { merge: true });
@@ -89,7 +81,6 @@ export const createUserProfile = async (user: User, additionalData?: any) => {
   return userRef;
 };
 
-// Sign up with email and password
 export const signUpWithEmail = async (
   email: string, 
   password: string, 
@@ -97,13 +88,8 @@ export const signUpWithEmail = async (
 ): Promise<User> => {
   try {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    
-    // Update the user's display name
     await updateProfile(user, { displayName });
-    
-    // Create user profile in Firestore
     await createUserProfile(user, { displayName });
-    
     return user;
   } catch (error: any) {
     console.error('Error signing up with email:', error);
@@ -111,17 +97,13 @@ export const signUpWithEmail = async (
   }
 };
 
-// Sign in with email and password
 export const signInWithEmail = async (
   email: string, 
   password: string
 ): Promise<User> => {
   try {
     const { user } = await signInWithEmailAndPassword(auth, email, password);
-    
-    // Update user profile with last login
     await createUserProfile(user);
-    
     return user;
   } catch (error: any) {
     console.error('Error signing in with email:', error);
@@ -129,20 +111,17 @@ export const signInWithEmail = async (
   }
 };
 
-// Sign in with Google using Expo AuthSession (Mobile-optimized)
 export const signInWithGoogle = async (): Promise<User> => {
   try {
-    // Determine which client ID to use based on platform/environment
-    let clientId = GOOGLE_OAUTH_CONFIG.expoClientId; // Default for Expo Go
+    let clientId = GOOGLE_OAUTH_CONFIG.expoClientId;
     
-    // TODO: Uncomment these when building for production
-    // if (Platform.OS === 'ios') {
-    //   clientId = GOOGLE_OAUTH_CONFIG.iosClientId;
-    // } else if (Platform.OS === 'android') {
-    //   clientId = GOOGLE_OAUTH_CONFIG.androidClientId;
-    // }
+    // Use platform-specific client ID for production builds
+    if (Platform.OS === 'ios') {
+      clientId = GOOGLE_OAUTH_CONFIG.iosClientId;
+    } else if (Platform.OS === 'android') {
+      clientId = GOOGLE_OAUTH_CONFIG.androidClientId;
+    }
     
-    // Create auth request
     const request = new AuthSession.AuthRequest({
       clientId,
       scopes: ['openid', 'profile', 'email'],
@@ -150,21 +129,14 @@ export const signInWithGoogle = async (): Promise<User> => {
       responseType: AuthSession.ResponseType.IdToken,
     });
 
-    // Start the auth session
     const result = await request.promptAsync({
       authorizationEndpoint: 'https://accounts.google.com/oauth/authorize',
     });
 
     if (result.type === 'success' && result.params.id_token) {
-      // Create a Google credential with the token
       const googleCredential = GoogleAuthProvider.credential(result.params.id_token);
-      
-      // Sign-in the user with the credential
       const { user } = await signInWithCredential(auth, googleCredential);
-      
-      // Create user profile in Firestore
       await createUserProfile(user);
-      
       return user;
     } else {
       throw new Error('Google sign-in was cancelled or failed');
@@ -175,7 +147,6 @@ export const signInWithGoogle = async (): Promise<User> => {
   }
 };
 
-// Sign out
 export const signOut = async (): Promise<void> => {
   try {
     await firebaseSignOut(auth);
@@ -186,7 +157,6 @@ export const signOut = async (): Promise<void> => {
   }
 };
 
-// Get user profile from Firestore
 export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
     const userRef = doc(db, 'users', uid);
@@ -197,7 +167,6 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
       return { 
         uid, 
         ...data,
-        // Convert Firestore timestamps to Timestamp objects
         createdAt: data.createdAt || Timestamp.now(),
         lastActiveAt: data.lastActiveAt || Timestamp.now(),
       } as UserProfile;
@@ -210,7 +179,6 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
   }
 };
 
-// Update user settings
 export const updateUserSettings = async (
   uid: string, 
   settings: Partial<UserSettings>
@@ -223,10 +191,12 @@ export const updateUserSettings = async (
         ...settings
       }
     }, { merge: true });
-    
     console.log('User settings updated successfully');
   } catch (error) {
     console.error('Error updating user settings:', error);
     throw error;
   }
 };
+
+// Export the auth state change listener for the provider
+export { onAuthStateChanged };

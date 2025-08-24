@@ -22,6 +22,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pomodorotimer.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1.0.0",
       "infoPlist": {
         "CFBundleURLTypes": [
@@ -38,6 +39,7 @@
         "backgroundColor": "#e74c3c"
       },
       "package": "com.pomodorotimer.app",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "permissions": [

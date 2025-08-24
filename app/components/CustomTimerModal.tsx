@@ -13,6 +13,7 @@ interface TimerPreset {
   work: number;
   break: number;
   longBreak: number;
+  sessionsUntilLongBreak?: number;
 }
 
 interface CustomTimerModalProps {
@@ -29,15 +30,17 @@ export default function CustomTimerModal({
   const [workMinutes, setWorkMinutes] = useState<string>('');
   const [breakMinutes, setBreakMinutes] = useState<string>('');
   const [longBreakMinutes, setLongBreakMinutes] = useState<string>('');
+  const [sessionsUntilLongBreak, setSessionsUntilLongBreak] = useState<string>('4');
 
   const handleSetTimer = (): void => {
     const work = parseInt(workMinutes.trim());
     const breakTime = parseInt(breakMinutes.trim());
     const longBreak = parseInt(longBreakMinutes.trim());
+    const sessionsUntilLongBreakNum = parseInt(sessionsUntilLongBreak.trim());
 
     // Check for empty inputs
     if (!workMinutes.trim()) {
-      Alert.alert('Invalid Input', 'Please enter work time');
+      Alert.alert('Invalid Input', 'Please enter work session duration');
       return;
     }
 
@@ -51,9 +54,14 @@ export default function CustomTimerModal({
       return;
     }
 
+    if (!sessionsUntilLongBreak.trim()) {
+      Alert.alert('Invalid Input', 'Please enter sessions until long break');
+      return;
+    }
+
     // Check for valid numbers
     if (isNaN(work) || work <= 0 || work > 120) {
-      Alert.alert('Invalid Input', 'Work time must be between 1-120 minutes');
+      Alert.alert('Invalid Input', 'Work session must be between 1-120 minutes');
       return;
     }
 
@@ -67,20 +75,27 @@ export default function CustomTimerModal({
       return;
     }
 
+    if (isNaN(sessionsUntilLongBreakNum) || sessionsUntilLongBreakNum <= 0 || sessionsUntilLongBreakNum > 10) {
+      Alert.alert('Invalid Input', 'Sessions until long break must be between 1-10');
+      return;
+    }
+
     // Create the timer object
     const customTimer: TimerPreset = {
       work,
       break: breakTime,
-      longBreak
+      longBreak,
+      sessionsUntilLongBreak: sessionsUntilLongBreakNum
     };
 
-    console.log('Setting custom timer:', customTimer); // Debug log
+    console.log('Setting custom timer:', customTimer);
 
     onSetCustomTimer(customTimer);
 
     setWorkMinutes('');
     setBreakMinutes('');
     setLongBreakMinutes('');
+    setSessionsUntilLongBreak('4');
     onClose();
   };
 
@@ -88,6 +103,7 @@ export default function CustomTimerModal({
     setWorkMinutes('');
     setBreakMinutes('');
     setLongBreakMinutes('');
+    setSessionsUntilLongBreak('4');
     onClose();
   };
 
@@ -103,7 +119,7 @@ export default function CustomTimerModal({
           <Text style={styles.modalTitle}>Custom Timer</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Work Time (minutes)</Text>
+            <Text style={styles.inputLabel}>Work Session (minutes)</Text>
             <TextInput
               style={styles.input}
               value={workMinutes}
@@ -133,6 +149,18 @@ export default function CustomTimerModal({
               value={longBreakMinutes}
               onChangeText={setLongBreakMinutes}
               placeholder="15"
+              keyboardType="numeric"
+              maxLength={2}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Sessions Until Long Break</Text>
+            <TextInput
+              style={styles.input}
+              value={sessionsUntilLongBreak}
+              onChangeText={setSessionsUntilLongBreak}
+              placeholder="4"
               keyboardType="numeric"
               maxLength={2}
             />

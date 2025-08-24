@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../lib/context/AuthContext';
+import { useAuth } from '../../src/providers/auth';
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState(false);

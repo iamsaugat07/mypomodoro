@@ -1,15 +1,9 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import { 
-  signInWithEmail as authSignInWithEmail,
-  signUpWithEmail as authSignUpWithEmail,
-  signInWithGoogle as authSignInWithGoogle,
-  signOut as authSignOut,
-  getUserProfile,
-  createUserProfile
-} from '../services/auth';
+import { User } from 'firebase/auth';
 import { AuthContextType, UserProfile } from '../types';
+import { onAuthStateChanged } from '../services/auth';
+import { auth } from '../config/firebase';
+import * as authService from '../services/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -35,21 +29,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setLoading(true);
         
         if (firebaseUser) {
-          console.log('User authenticated:', firebaseUser.email);
-          
-          // Get full user profile from Firestore
-          let userProfile = await getUserProfile(firebaseUser.uid);
+          let userProfile = await authService.getUserProfile(firebaseUser.uid);
           
           if (!userProfile) {
-            // Create profile if it doesn't exist
-            console.log('Creating user profile...');
-            await createUserProfile(firebaseUser);
-            userProfile = await getUserProfile(firebaseUser.uid);
+            await authService.createUserProfile(firebaseUser);
+            userProfile = await authService.getUserProfile(firebaseUser.uid);
           }
           
           setUser(userProfile);
         } else {
-          console.log('User not authenticated');
           setUser(null);
         }
       } catch (error) {
@@ -64,10 +52,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signInWithEmail = async (email: string, password: string): Promise<void> => {
+    setLoading(true);
     try {
-      setLoading(true);
-      await authSignInWithEmail(email, password);
-      // User state will be updated by onAuthStateChanged listener
+      await authService.signInWithEmail(email, password);
     } catch (error) {
       setLoading(false);
       throw error;
@@ -79,10 +66,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     password: string, 
     displayName: string
   ): Promise<void> => {
+    setLoading(true);
     try {
-      setLoading(true);
-      await authSignUpWithEmail(email, password, displayName);
-      // User state will be updated by onAuthStateChanged listener
+      await authService.signUpWithEmail(email, password, displayName);
     } catch (error) {
       setLoading(false);
       throw error;
@@ -90,10 +76,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signInWithGoogle = async (): Promise<void> => {
+    setLoading(true);
     try {
-      setLoading(true);
-      await authSignInWithGoogle();
-      // User state will be updated by onAuthStateChanged listener
+      await authService.signInWithGoogle();
     } catch (error) {
       setLoading(false);
       throw error;
@@ -101,10 +86,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signOut = async (): Promise<void> => {
+    setLoading(true);
     try {
-      setLoading(true);
-      await authSignOut();
-      // User state will be updated by onAuthStateChanged listener
+      await authService.signOut();
     } catch (error) {
       setLoading(false);
       throw error;

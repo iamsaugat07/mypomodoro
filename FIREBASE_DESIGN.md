@@ -1,15 +1,38 @@
-# Firebase Database Design for Expo Pomodoro App
+# Firebase Database Design - Live Implementation ✅
 
-## 🎯 Design Goals
-- **Fast reads** for real-time UI updates
-- **Scalable** structure that handles millions of users
-- **Offline-first** design with Firestore caching
-- **Cost-optimized** with minimal reads/writes
-- **Real-time sync** across devices
+## 🎯 Current Setup
+Firebase is fully configured and operational with:
+- **Real-time updates** via Firestore listeners
+- **Offline-first** architecture with intelligent conflict resolution  
+- **Enterprise-grade** data validation and recovery
+- **Performance optimized** with caching and analytics
+- **Production ready** scalable architecture
 
-## 📊 Database Structure
+## 📊 Current Database Structure
 
-### 1. Users Collection
+### 1. Sessions Collection (Global)
+```typescript
+// Collection: sessions
+// Document ID: auto-generated
+{
+  sessionId: string,           // Unique session identifier
+  userId: string,              // User who owns this session
+  type: 'work' | 'break' | 'longBreak',
+  startTime: Timestamp,        // When session started
+  endTime?: Timestamp,         // When session ended (if completed)
+  plannedDuration: number,     // Duration in seconds
+  actualDuration?: number,     // Actual time spent (if completed)
+  completed: boolean,          // Whether session was completed
+  date: string,               // YYYY-MM-DD for easy querying
+  pausedTime?: Timestamp,      // For pause/resume functionality
+  
+  // Metadata
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+### 2. Users Collection
 ```typescript
 // Collection: users
 // Document ID: {userId}
@@ -17,58 +40,58 @@
   uid: string,
   email: string,
   displayName: string,
-  photoURL: string | null,
+  photoURL?: string,
   createdAt: Timestamp,
   lastActiveAt: Timestamp,
+  lastSessionDate?: string,    // For streak calculation
   
-  // Cached stats for quick access (denormalized)
+  // Aggregated statistics (denormalized for performance)
   totalSessions: number,
   totalFocusMinutes: number,
   currentStreak: number,
   longestStreak: number,
   
-  // User preferences
+  // User settings with validation
   settings: {
     notifications: boolean,
     autoStartBreaks: boolean,
     autoStartPomodoros: boolean,
-    defaultWorkDuration: number,
-    defaultBreakDuration: number,
-    defaultLongBreakDuration: number,
+    defaultWorkDuration: number,     // 5-180 minutes
+    defaultBreakDuration: number,    // 1-30 minutes  
+    defaultLongBreakDuration: number, // 5-60 minutes
     
-    // Custom presets stored as map
+    // Custom presets with full validation
     customPresets: {
-      [presetId]: {
-        name: string,
-        work: number,
-        break: number,
-        longBreak: number,
-        createdAt: Timestamp
+      [presetId: string]: {
+        id: string,
+        name: string,               // Max 50 characters
+        work: number,               // 1-180 minutes
+        break: number,              // 1-60 minutes
+        longBreak: number,          // 1-120 minutes
+        createdAt: Timestamp,
+        isDefault: boolean
       }
     }
-  }
+  },
+  
+  updatedAt: Timestamp
 }
 ```
 
-### 2. Sessions Subcollection (per user)
+### 3. Analytics Collection (Optional)
 ```typescript
-// Collection: users/{userId}/sessions
+// Collection: analytics
 // Document ID: auto-generated
 {
-  id: string,
-  type: 'work' | 'break' | 'longBreak',
-  startedAt: Timestamp,
-  endedAt: Timestamp | null,
-  duration: number, // planned duration in seconds
-  actualDuration: number, // actual time spent
-  completed: boolean,
-  presetUsed: string, // 'pomodoro', 'custom_123', etc.
-  
-  // For easy querying
-  date: string, // YYYY-MM-DD
-  dayOfWeek: number, // 0-6 (Sunday-Saturday)
-  week: string, // YYYY-WW
-  month: string, // YYYY-MM
+  events: [{
+    eventName: string,
+    duration?: number,
+    timestamp: Timestamp,
+    userId?: string,
+    metadata?: object,
+    platform: 'react-native'
+  }],
+  serverTimestamp: Timestamp
 }
 ```
 
@@ -107,27 +130,29 @@
 }
 ```
 
-## 🔥 Firebase Rules (Security)
+## 🔥 Current Firebase Security Rules
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only access their own data
+    // Sessions: Users can only access their own sessions
+    match /sessions/{sessionId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Users: Can only access their own profile
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Subcollections inherit parent permissions
-      match /sessions/{sessionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      
-      match /dailyStats/{date} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      
-      match /weeklyStats/{week} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+      allow read, write: if request.auth != null && 
+        request.auth.uid == userId;
+    }
+    
+    // Analytics: Authenticated users can write (for performance tracking)
+    match /analytics/{document=**} {
+      allow write: if request.auth != null;
+      allow read: if false; // No reads allowed for privacy
     }
   }
 }

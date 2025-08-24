@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,43 +6,62 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert
 } from 'react-native';
-import { useAuth } from '../../lib/context/AuthContext';
-import { useTodayStats, useWeeklyStats } from '../../lib/hooks/useFirestore';
+import { useAuth } from '../../src/providers/auth';
+import { useStatistics } from '../../src/hooks/useStatistics';
 
 const { width } = Dimensions.get('window');
 
 export default function Stats() {
   const { user } = useAuth();
-  const { stats: todayStats, loading: todayLoading } = useTodayStats();
-  const { weeklyStats, loading: weeklyLoading } = useWeeklyStats();
+  const { statistics, loading, error, refreshStatistics } = useStatistics();
+
+  const handleRefresh = async () => {
+    try {
+      await refreshStatistics();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to refresh statistics');
+    }
+  };
 
   // Transform weekly stats for chart display
   const chartData = React.useMemo(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const today = new Date();
-    const chartStats = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateString = date.toISOString().split('T')[0];
-      
-      const dayData = weeklyStats.find(stat => stat.date === dateString);
-      chartStats.push({
-        day: days[date.getDay() === 0 ? 6 : date.getDay() - 1], // Adjust for Monday start
-        pomodoros: dayData?.workSessions || 0
-      });
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    if (!statistics?.weeklyStats) {
+      return dayNames.map(day => ({ day, pomodoros: 0 }));
     }
 
-    return chartStats;
-  }, [weeklyStats]);
+    return statistics.weeklyStats.map((dayStats) => {
+      // Parse the date and get the correct day name
+      const date = new Date(dayStats.date);
+      const dayName = dayNames[date.getDay()]; // getDay() returns 0-6 (Sun-Sat)
+      
+      return {
+        day: dayName,
+        pomodoros: dayStats.workSessions || 0
+      };
+    });
+  }, [statistics?.weeklyStats]);
 
-  if (todayLoading && weeklyLoading) {
+  if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#e74c3c" />
         <Text style={{ marginTop: 16, color: '#666' }}>Loading your stats...</Text>
+      </View>
+    );
+  }
+
+  if (error && !statistics) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#e74c3c', marginBottom: 16 }}>Failed to load statistics</Text>
+        <TouchableOpacity onPress={handleRefresh} style={{ padding: 12, backgroundColor: '#e74c3c', borderRadius: 8 }}>
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -110,8 +129,13 @@ export default function Stats() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Statistics</Text>
-        <Text style={styles.headerSubtitle}>Track your productivity</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Statistics</Text>
+          <Text style={styles.headerSubtitle}>Track your productivity</Text>
+        </View>
+        <TouchableOpacity onPress={handleRefresh} style={{ padding: 8 }}>
+          <Text style={{ color: '#e74c3c', fontWeight: '600' }}>Refresh</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -119,26 +143,26 @@ export default function Stats() {
         <View style={styles.statsGrid}>
           <StatCard
             title="Pomodoros"
-            value={todayStats?.workSessions || 0}
+            value={statistics?.todayStats?.workSessions || 0}
             subtitle="completed"
             color="#e74c3c"
           />
           <StatCard
             title="Focus Time"
-            value={formatTime(todayStats?.totalFocusMinutes || 0)}
+            value={formatTime(statistics?.todayStats?.totalFocusMinutes || 0)}
             subtitle="total"
             color="#2ecc71"
           />
           <StatCard
             title="Breaks"
-            value={todayStats?.breakSessions || 0}
+            value={statistics?.todayStats?.breakSessions || 0}
             subtitle="taken"
             color="#3498db"
           />
           <StatCard
-            title="Best Streak"
-            value={todayStats?.longestStreak || 0}
-            subtitle="in a row"
+            title="Current Streak"
+            value={statistics?.currentStreak || 0}
+            subtitle="days"
             color="#f39c12"
           />
         </View>
@@ -150,41 +174,33 @@ export default function Stats() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Achievements</Text>
-        <View style={styles.achievement}>
-          <View style={styles.achievementIcon}>
-            <Text style={styles.achievementEmoji}>🔥</Text>
+        {statistics?.achievements && statistics.achievements.length > 0 ? (
+          statistics.achievements.map((achievement) => (
+            <View key={achievement.id} style={styles.achievement}>
+              <View style={styles.achievementIcon}>
+                <Text style={styles.achievementEmoji}>{achievement.icon}</Text>
+              </View>
+              <View style={styles.achievementText}>
+                <Text style={styles.achievementTitle}>{achievement.title}</Text>
+                <Text style={styles.achievementDescription}>
+                  {achievement.description}
+                </Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={styles.achievement}>
+            <View style={styles.achievementIcon}>
+              <Text style={styles.achievementEmoji}>🎯</Text>
+            </View>
+            <View style={styles.achievementText}>
+              <Text style={styles.achievementTitle}>Getting Started</Text>
+              <Text style={styles.achievementDescription}>
+                Complete your first session to unlock achievements!
+              </Text>
+            </View>
           </View>
-          <View style={styles.achievementText}>
-            <Text style={styles.achievementTitle}>On Fire!</Text>
-            <Text style={styles.achievementDescription}>
-              Completed 5 pomodoros in a row
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.achievement}>
-          <View style={styles.achievementIcon}>
-            <Text style={styles.achievementEmoji}>⭐</Text>
-          </View>
-          <View style={styles.achievementText}>
-            <Text style={styles.achievementTitle}>Daily Goal</Text>
-            <Text style={styles.achievementDescription}>
-              Reached your daily target of 8 pomodoros
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.achievement, { opacity: 0.5 }]}>
-          <View style={styles.achievementIcon}>
-            <Text style={styles.achievementEmoji}>🏆</Text>
-          </View>
-          <View style={styles.achievementText}>
-            <Text style={styles.achievementTitle}>Week Champion</Text>
-            <Text style={styles.achievementDescription}>
-              Complete 50 pomodoros this week (44/50)
-            </Text>
-          </View>
-        </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -205,6 +221,8 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 32,
