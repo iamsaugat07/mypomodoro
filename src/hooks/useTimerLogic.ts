@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { SessionType, TimerPreset } from '../../../src/types';
-import { useSessionManager } from '../../../src/hooks/useSessionManager';
-import { useSettings } from '../../../src/hooks/useSettings';
+import { SessionType, TimerPreset } from '../types';
+import { useSessionManager } from './useSessionManager';
+import { useSettings } from './useSettings';
 
 const TIMER_PRESETS: Record<string, TimerPreset> = {
   pomodoro: { work: 25, break: 5, longBreak: 15 },
@@ -49,26 +49,18 @@ export const useTimerLogic = () => {
     }
   }, [elapsedTime, isSessionActive, activeSession]);
 
-  // Load settings defaults
+  // Load settings defaults only on initial load, not when presets change
   useEffect(() => {
     console.log('Settings effect triggered:', { settings: !!settings, selectedPreset, sessionType, isSessionActive });
-    if (settings && !isSessionActive) {
-      // Don't override custom timer settings
-      if (selectedPreset === 'custom') {
-        console.log('Skipping settings override for custom preset');
-        return;
-      }
-      
+    if (settings && !isSessionActive && selectedPreset === 'pomodoro' && sessionType === 'work' && timeLeft === 25 * 60) {
+      // Only apply settings defaults on initial load with default values
+      console.log('Applying initial settings defaults');
       const presetData = getPresetData(selectedPreset);
-      const duration = sessionType === 'work' ? 
-        (settings.defaultWorkDuration || presetData.work) : 
-        (sessionType === 'break' ? 
-          (settings.defaultBreakDuration || presetData.break) : 
-          (settings.defaultLongBreakDuration || presetData.longBreak));
+      const duration = settings.defaultWorkDuration || presetData.work;
       console.log('Settings effect setting timeLeft to:', duration * 60);
       setTimeLeft(duration * 60);
     }
-  }, [settings, selectedPreset, sessionType, isSessionActive]);
+  }, [settings, selectedPreset, sessionType, isSessionActive, timeLeft]);
 
   const getPresetData = useCallback((preset: string) => {
     const presetData = TIMER_PRESETS[preset];
@@ -183,6 +175,8 @@ export const useTimerLogic = () => {
   }, [isSessionActive, cancelSession, selectedPreset, sessionType, settings, getPresetData]);
 
   const changePreset = useCallback(async (preset: string): Promise<void> => {
+    console.log('changePreset called with:', preset);
+    
     if (isSessionActive) {
       await cancelSession();
     }
@@ -195,9 +189,11 @@ export const useTimerLogic = () => {
     setSessionsCompleted(0);
     setCycleSessionsCompleted(0);
     
-    const duration = settings?.defaultWorkDuration || presetData.work;
+    // Always use the preset's work duration for preset changes (not settings override)
+    const duration = presetData.work;
+    console.log('Setting timeLeft to preset duration:', duration * 60, 'seconds (', duration, 'minutes)');
     setTimeLeft(duration * 60);
-  }, [isSessionActive, cancelSession, getPresetData, settings]);
+  }, [isSessionActive, cancelSession, getPresetData]);
 
   const handleCustomTimer = useCallback(async (customTimes: TimerPreset): Promise<void> => {
     console.log('handleCustomTimer called with:', customTimes);

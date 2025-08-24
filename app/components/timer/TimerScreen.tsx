@@ -5,7 +5,7 @@ import CustomTimerModal from '../CustomTimerModal';
 import TimerDisplay from './TimerDisplay';
 import TimerControls from './TimerControls';
 import PresetSelector from './PresetSelector';
-import { useTimerLogic } from './useTimerLogic';
+import { useTimerLogic } from '../../../src/hooks/useTimerLogic';
 
 export default function TimerScreen() {
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
