@@ -28,7 +28,9 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "pomodoroapp",
-            "CFBundleURLSchemes": ["pomodoroapp"]
+            "CFBundleURLSchemes": [
+              "pomodoroapp"
+            ]
           }
         ]
       }
@@ -38,7 +40,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#e74c3c"
       },
-      "package": "com.pomodorotimer.app",
+      "package": "com.pomodorotimerbysaugat.app",
       "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "edgeToEdgeEnabled": true,
@@ -56,8 +58,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "11067d3a-79b7-4499-988b-8c162d0be289"
       }
-    }
+    },
+    "owner": "iamsaugat07"
   }
 }
