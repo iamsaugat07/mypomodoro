@@ -2,6 +2,8 @@ import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserSettings, TimerPreset } from '../types';
+import premiumGate from './premiumGate';
+import { analyticsManager } from './analyticsManager';
 
 export interface ValidationError {
   field: string;
@@ -58,6 +60,7 @@ class SettingsManager {
       return this.DEFAULT_SETTINGS;
     } catch (error) {
       console.error('Error loading settings:', error);
+      analyticsManager.trackError('settings_load_failed', error.message, userId);
       
       // Try local cache as fallback
       const cached = await this.getCachedSettings();
@@ -89,9 +92,13 @@ class SettingsManager {
       return []; // No errors
     } catch (error) {
       console.error('Error saving settings:', error);
+      analyticsManager.trackError('settings_save_failed', error.message, userId);
       
-      // Queue for offline
-      await this.queueSettingsForOffline(settings);
+      // Handle offline scenarios
+      if (error.code === 'unavailable') {
+        await this.queueSettingsForOffline(settings);
+      }
+      
       throw error;
     }
   }
@@ -103,6 +110,15 @@ class SettingsManager {
       throw new Error(`Invalid preset: ${errors.map(e => e.message).join(', ')}`);
     }
 
+    // Check premium gate for custom presets
+    const currentSettings = this.cachedSettings || await this.loadSettings(userId);
+    const currentPresetCount = Object.keys(currentSettings.customPresets).length;
+    
+    const canCreate = premiumGate.canCreateCustomPreset(currentPresetCount);
+    if (!canCreate.canAccess) {
+      throw new Error(canCreate.upgradeMessage || 'Cannot create more custom presets on free plan');
+    }
+
     const presetId = `preset_${Date.now()}`;
     const customPreset: CustomPreset = {
       ...preset,
@@ -111,7 +127,6 @@ class SettingsManager {
       isDefault: false
     };
 
-    const currentSettings = this.cachedSettings || await this.loadSettings(userId);
     const updatedSettings: UserSettings = {
       ...currentSettings,
       customPresets: {
@@ -122,6 +137,26 @@ class SettingsManager {
 
     await this.saveSettings(userId, { customPresets: updatedSettings.customPresets });
     return presetId;
+  }
+
+  // Get current custom preset count for UI
+  getCustomPresetCount(): number {
+    if (!this.cachedSettings) return 0;
+    return Object.keys(this.cachedSettings.customPresets).length;
+  }
+
+  // Check if user can create more custom presets
+  canCreateMorePresets(): { canCreate: boolean; limit?: number; current?: number; upgradeMessage?: string } {
+    const currentCount = this.getCustomPresetCount();
+    const featureAccess = premiumGate.canCreateCustomPreset(currentCount);
+    const limitInfo = premiumGate.checkCustomPresetLimit(currentCount);
+    
+    return {
+      canCreate: featureAccess.canAccess,
+      current: currentCount,
+      limit: limitInfo.maxAllowed,
+      upgradeMessage: featureAccess.upgradeMessage
+    };
   }
 
   async removeCustomPreset(userId: string, presetId: string): Promise<void> {
@@ -255,6 +290,7 @@ class SettingsManager {
       await AsyncStorage.setItem('userSettings', JSON.stringify(settings));
     } catch (error) {
       console.error('Error caching settings:', error);
+      analyticsManager.trackError('settings_cache_failed', error.message);
     }
   }
 
@@ -264,6 +300,7 @@ class SettingsManager {
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
       console.error('Error getting cached settings:', error);
+      analyticsManager.trackError('settings_cache_read_failed', error.message);
       return null;
     }
   }
@@ -275,6 +312,7 @@ class SettingsManager {
       await AsyncStorage.setItem('offlineSettingsChanges', JSON.stringify(this.offlineChanges));
     } catch (error) {
       console.error('Error queuing settings for offline:', error);
+      analyticsManager.trackError('settings_offline_queue_failed', error.message);
     }
   }
 
@@ -298,6 +336,7 @@ class SettingsManager {
       }
     } catch (error) {
       console.error('Error processing offline settings changes:', error);
+      analyticsManager.trackError('settings_offline_process_failed', error.message, userId);
     }
   }
 

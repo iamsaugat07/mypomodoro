@@ -1,8 +1,10 @@
 import { Stack } from "expo-router/stack";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Platform } from "react-native";
 import { useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "../src/providers/auth";
+import { SubscriptionProvider } from "../src/providers/subscription";
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
@@ -43,23 +45,23 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#e74c3c' },
+        contentStyle: { backgroundColor: "#e74c3c" },
       }}
     >
       <Stack.Screen
         name="auth"
         options={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#e74c3c' },
-          animation: 'fade',
+          contentStyle: { backgroundColor: "#e74c3c" },
+          animation: "fade",
         }}
       />
       <Stack.Screen
         name="(tabs)"
         options={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#e74c3c' },
-          animation: 'fade',
+          contentStyle: { backgroundColor: "#e74c3c" },
+          animation: "fade",
         }}
       />
     </Stack>
@@ -67,9 +69,13 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const REVENUE_CAT_API_KEY = "goog_TmQIvIdxKLtBORhNtcZzBTDVwLg";
+
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <SubscriptionProvider revenueCatApiKey={REVENUE_CAT_API_KEY}>
+        <RootLayoutNav />
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }

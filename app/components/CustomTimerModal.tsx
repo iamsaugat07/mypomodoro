@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -8,6 +8,10 @@ import {
   StyleSheet,
   Alert
 } from 'react-native';
+import { useSubscription } from '../../src/providers/subscription';
+import { settingsManager } from '../../src/services/settingsManager';
+import { CustomPresetsLockedCard } from './premium/FeatureLockedCard';
+import { PremiumBadge } from './premium/PremiumBadge';
 
 interface TimerPreset {
   work: number;
@@ -20,19 +24,44 @@ interface CustomTimerModalProps {
   visible: boolean;
   onClose: () => void;
   onSetCustomTimer: (customTimes: TimerPreset) => void;
+  userId?: string; // Add userId prop
 }
 
 export default function CustomTimerModal({ 
   visible, 
   onClose, 
-  onSetCustomTimer 
+  onSetCustomTimer,
+  userId = ''
 }: CustomTimerModalProps) {
   const [workMinutes, setWorkMinutes] = useState<string>('');
   const [breakMinutes, setBreakMinutes] = useState<string>('');
   const [longBreakMinutes, setLongBreakMinutes] = useState<string>('');
   const [sessionsUntilLongBreak, setSessionsUntilLongBreak] = useState<string>('4');
+  const [presetLimit, setPresetLimit] = useState<{canCreate: boolean; current?: number; limit?: number; upgradeMessage?: string}>({canCreate: true});
+  
+  const { isPremium, canCreateCustomPreset } = useSubscription();
+
+  useEffect(() => {
+    if (visible) {
+      const limitInfo = settingsManager.canCreateMorePresets();
+      setPresetLimit(limitInfo);
+    }
+  }, [visible]);
 
   const handleSetTimer = (): void => {
+    // Check premium limitations first
+    if (!presetLimit.canCreate) {
+      Alert.alert(
+        'Premium Required',
+        presetLimit.upgradeMessage || 'You need Premium to create more custom timer presets.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Upgrade to Premium', onPress: () => {/* This will be handled by the locked card */} }
+        ]
+      );
+      return;
+    }
+
     const work = parseInt(workMinutes.trim());
     const breakTime = parseInt(breakMinutes.trim());
     const longBreak = parseInt(longBreakMinutes.trim());
@@ -116,7 +145,27 @@ export default function CustomTimerModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Custom Timer</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.modalTitle}>Custom Timer</Text>
+            {isPremium && <PremiumBadge variant="small" />}
+          </View>
+
+          {/* Show upgrade card if user has hit the preset limit */}
+          {!presetLimit.canCreate ? (
+            <CustomPresetsLockedCard 
+              currentCount={presetLimit.current || 0} 
+              style={styles.upgradeCard}
+            />
+          ) : (
+            <>
+              {/* Show current usage for free users */}
+              {!isPremium && presetLimit.limit && (
+                <View style={styles.usageInfo}>
+                  <Text style={styles.usageText}>
+                    {presetLimit.current}/{presetLimit.limit} custom presets used
+                  </Text>
+                </View>
+              )}
           
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Work Session (minutes)</Text>
@@ -166,21 +215,23 @@ export default function CustomTimerModal({
             />
           </View>
 
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={handleCancel}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.modalButton, styles.setButton]}
-              onPress={handleSetTimer}
-            >
-              <Text style={styles.setButtonText}>Set Timer</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={handleCancel}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.setButton]}
+                  onPress={handleSetTimer}
+                >
+                  <Text style={styles.setButtonText}>Set Timer</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -200,13 +251,36 @@ const styles = StyleSheet.create({
     padding: 30,
     width: '80%',
     maxWidth: 400,
+    maxHeight: '80%',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    gap: 10,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
     color: '#333',
+  },
+  upgradeCard: {
+    marginBottom: 20,
+  },
+  usageInfo: {
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  usageText: {
+    fontSize: 14,
+    color: '#F57C00',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   inputGroup: {
     marginBottom: 20,

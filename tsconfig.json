@@ -1,9 +1,13 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true
   },
   "include": [
-    "app/**/*"
+    "app/**/*",
+    "src/**/*"
   ]
 }

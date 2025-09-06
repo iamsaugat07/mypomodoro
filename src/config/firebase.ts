@@ -6,12 +6,12 @@ import Constants from 'expo-constants';
 
 // Firebase configuration from your project
 const firebaseConfig = {
-  apiKey: "AIzaSyBYOdNrPILQb9m7ufZzeUtvK-gwMTCs8lk",
+  apiKey: "AIzaSyBBSqSrc7Gom_DjwuPbFG-3Xx3uc_xpxH8",
   authDomain: "pomodoro-f0021.firebaseapp.com", 
   projectId: "pomodoro-f0021",
   storageBucket: "pomodoro-f0021.firebasestorage.app",
   messagingSenderId: "96748369657",
-  appId: "1:96748369657:ios:4f49d79b071be0d157d428"
+  appId: "1:96748369657:android:cdaec5ab0971d59a57d428"
 };
 
 // Initialize Firebase

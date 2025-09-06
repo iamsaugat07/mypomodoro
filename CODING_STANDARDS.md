@@ -268,6 +268,72 @@ export interface ServiceResponse<T> {
 }
 ```
 
+### React Component Typing
+**Follow React Team's Official Recommendation: Avoid React.FC entirely**
+
+```typescript
+// ✅ RECOMMENDED: Plain function components with explicit prop interfaces
+interface ButtonProps {
+  title: string;
+  onPress: () => void;
+  disabled?: boolean;
+}
+
+const Button = ({ title, onPress, disabled = false }: ButtonProps) => {
+  return (
+    <TouchableOpacity onPress={onPress} disabled={disabled}>
+      <Text>{title}</Text>
+    </TouchableOpacity>
+  );
+};
+
+// ✅ RECOMMENDED: Explicit children prop when needed
+interface LayoutProps {
+  backgroundColor?: string;
+  children: React.ReactNode;
+}
+
+const Layout = ({ backgroundColor = '#fff', children }: LayoutProps) => {
+  return (
+    <View style={[styles.container, { backgroundColor }]}>
+      {children}
+    </View>
+  );
+};
+
+// ✅ RECOMMENDED: Optional children when sometimes needed
+interface CardProps {
+  title: string;
+  children?: React.ReactNode;
+}
+
+const Card = ({ title, children }: CardProps) => {
+  return (
+    <View style={styles.card}>
+      <Text style={styles.title}>{title}</Text>
+      {children}
+    </View>
+  );
+};
+
+// ❌ AVOID: React.FC is discouraged by React team
+const BadComponent: React.FC<ButtonProps> = ({ title, onPress }) => {
+  // Issues with React.FC:
+  // - Implicitly adds children prop (type unsafe)
+  // - Less performant
+  // - More verbose
+  // - React team removed from their examples
+  return <TouchableOpacity onPress={onPress}><Text>{title}</Text></TouchableOpacity>;
+};
+```
+
+**Why Plain Functions Are Better:**
+- **Type Safety**: No implicit `children` prop
+- **Performance**: No wrapper overhead  
+- **Clarity**: Explicit about what props are accepted
+- **Modern**: Aligned with React 18+ patterns
+- **React Native**: Matches RN documentation examples
+
 ### Strict Type Checking
 ```typescript
 // Enable strict TypeScript settings
@@ -420,6 +486,8 @@ export class SessionManager {
 - [ ] No console.logs in production code (use console.error for errors)
 - [ ] Proper cleanup in useEffect hooks
 - [ ] Firebase security rules updated if schema changed
+- [ ] Components use plain function typing (no React.FC)
+- [ ] Children prop explicitly typed when needed
 
 ### Architecture Review
 - [ ] Follows service → hook → component pattern

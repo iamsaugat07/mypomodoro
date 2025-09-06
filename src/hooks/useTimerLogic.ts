@@ -5,9 +5,9 @@ import { useSessionManager } from './useSessionManager';
 import { useSettings } from './useSettings';
 
 const TIMER_PRESETS: Record<string, TimerPreset> = {
-  pomodoro: { work: 25, break: 5, longBreak: 15 },
-  shortWork: { work: 15, break: 5, longBreak: 15 },
-  longWork: { work: 50, break: 10, longBreak: 20 }
+  pomodoro: { work: 25, break: 5, longBreak: 15, sessionsUntilLongBreak: 4 },
+  shortWork: { work: 15, break: 5, longBreak: 15, sessionsUntilLongBreak: 4 },
+  longWork: { work: 50, break: 10, longBreak: 20, sessionsUntilLongBreak: 4 }
 };
 
 export const useTimerLogic = () => {
@@ -93,7 +93,10 @@ export const useTimerLogic = () => {
       setSessionsCompleted(newTotalSessionsCompleted);
       
       const sessionsUntilLongBreak = currentPreset.sessionsUntilLongBreak || 4;
+      console.log(`Session completed: ${newCycleSessionsCompleted}/${sessionsUntilLongBreak}, checking for long break: ${newCycleSessionsCompleted % sessionsUntilLongBreak === 0}`);
+      
       if (newCycleSessionsCompleted % sessionsUntilLongBreak === 0) {
+        console.log(`Triggering long break after ${newCycleSessionsCompleted} sessions`);
         setSessionType('longBreak');
         setTimeLeft(currentPreset.longBreak * 60);
         Alert.alert(
@@ -111,6 +114,12 @@ export const useTimerLogic = () => {
         );
       }
     } else {
+      // Break completed - check if it was a long break to reset cycle
+      if (sessionType === 'longBreak') {
+        setCycleSessionsCompleted(0); // Reset cycle after long break
+        console.log('Long break completed, resetting cycle counter to 0');
+      }
+      
       setSessionType('work');
       setTimeLeft(currentPreset.work * 60);
       

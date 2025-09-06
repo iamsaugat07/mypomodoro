@@ -10,13 +10,13 @@ interface TimerDisplayProps {
   sessionsUntilLongBreak: number;
 }
 
-const TimerDisplay: React.FC<TimerDisplayProps> = ({
+const TimerDisplay = ({
   timeLeft,
   sessionType,
   sessionsCompleted,
   cycleSessionsCompleted,
   sessionsUntilLongBreak
-}) => {
+}: TimerDisplayProps) => {
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;

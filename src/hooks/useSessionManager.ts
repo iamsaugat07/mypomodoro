@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import { sessionManager, ActiveSession } from '../services/sessionManager';
 import { useAuth } from '../providers/auth';
 
@@ -22,7 +22,7 @@ export const useSessionManager = (): UseSessionManagerReturn => {
   const [isPaused, setIsPaused] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const appStateRef = useRef(AppState.currentState);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   // Initialize and recover sessions on mount
   useEffect(() => {
@@ -52,7 +52,7 @@ export const useSessionManager = (): UseSessionManagerReturn => {
         stopElapsedTimeTracking();
       }
       
-      appStateRef.current = nextAppState;
+      appStateRef.current = nextAppState as AppStateStatus;
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);

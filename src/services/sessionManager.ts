@@ -7,13 +7,19 @@ import {
   increment,
   runTransaction,
   writeBatch,
-  Timestamp 
+  Timestamp,
+  query,
+  where,
+  limit,
+  getDocs,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SessionData {
   id?: string;
+  sessionId?: string;
   userId: string;
   type: 'work' | 'break' | 'longBreak';
   plannedDuration: number; // in seconds
@@ -50,22 +56,22 @@ class SessionManager {
     type: 'work' | 'break' | 'longBreak', 
     duration: number
   ): Promise<string> {
-    try {
-      const sessionData: Omit<SessionData, 'id'> = {
-        userId,
-        type,
-        plannedDuration: duration,
-        startTime: Timestamp.now(),
-        completed: false,
-        interrupted: false,
-        cancelled: false,
-        date: new Date().toISOString().split('T')[0],
-        deviceInfo: {
-          platform: 'mobile',
-          appVersion: '1.0.0'
-        }
-      };
+    const sessionData: Omit<SessionData, 'id'> = {
+      userId,
+      type,
+      plannedDuration: duration,
+      startTime: Timestamp.now(),
+      completed: false,
+      interrupted: false,
+      cancelled: false,
+      date: new Date().toISOString().split('T')[0],
+      deviceInfo: {
+        platform: 'mobile',
+        appVersion: '1.0.0'
+      }
+    };
 
+    try {
       const docRef = await addDoc(collection(db, 'sessions'), sessionData);
       
       // Store active session locally

@@ -9,14 +9,23 @@ import {
   TouchableOpacity,
   Alert
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/providers/auth';
 import { useStatistics } from '../../src/hooks/useStatistics';
+import { useSubscription } from '../../src/providers/subscription';
+import { StatisticsLockedCard, SessionHistoryLockedCard, DataExportLockedCard } from '../components/premium/FeatureLockedCard';
+import { PremiumBadge } from '../components/premium/PremiumBadge';
+import { statisticsManager } from '../../src/services/statisticsManager';
 
 const { width } = Dimensions.get('window');
+
+type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all-time';
 
 export default function Stats() {
   const { user } = useAuth();
   const { statistics, loading, error, refreshStatistics } = useStatistics();
+  const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('week');
+  const { isPremium, canAccessStatistics } = useSubscription();
 
   const handleRefresh = async () => {
     try {
@@ -24,6 +33,24 @@ export default function Stats() {
     } catch (err) {
       Alert.alert('Error', 'Failed to refresh statistics');
     }
+  };
+
+  const handleTimeRangeChange = (timeRange: TimeRange) => {
+    const canAccess = statisticsManager.canAccessTimeRange(timeRange);
+    
+    if (!canAccess.canAccess) {
+      Alert.alert(
+        'Premium Required',
+        canAccess.upgradeMessage || `${timeRange} statistics require Premium`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => {/* Will be handled by locked cards */} }
+        ]
+      );
+      return;
+    }
+    
+    setSelectedTimeRange(timeRange);
   };
 
   // Transform weekly stats for chart display
@@ -93,6 +120,54 @@ export default function Stats() {
     </View>
   );
 
+  const TimeRangeSelector = () => {
+    const timeRanges: { key: TimeRange; label: string }[] = [
+      { key: 'today', label: 'Today' },
+      { key: 'week', label: 'Week' },
+      { key: 'month', label: 'Month' },
+      { key: 'year', label: 'Year' },
+      { key: 'all-time', label: 'All Time' }
+    ];
+
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.timeRangeContainer}
+      >
+        {timeRanges.map((range) => {
+          const canAccess = statisticsManager.canAccessTimeRange(range.key);
+          const isSelected = selectedTimeRange === range.key;
+          const isLocked = !canAccess.canAccess;
+
+          return (
+            <TouchableOpacity
+              key={range.key}
+              style={[
+                styles.timeRangeButton,
+                isSelected && styles.timeRangeButtonActive,
+                isLocked && styles.timeRangeButtonLocked
+              ]}
+              onPress={() => handleTimeRangeChange(range.key)}
+              disabled={isLocked && !isSelected}
+            >
+              <Text style={[
+                styles.timeRangeText,
+                isSelected && styles.timeRangeTextActive,
+                isLocked && styles.timeRangeTextLocked
+              ]}>
+                {range.label}
+              </Text>
+              {isLocked && (
+                <Ionicons name="lock-closed" size={12} color="#999" style={{ marginLeft: 4 }} />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
   const WeeklyChart = () => {
     const maxPomodoros = Math.max(...chartData.map(d => d.pomodoros), 1); // Ensure minimum of 1
     const todayDay = new Date().toLocaleDateString('en', { weekday: 'short' });
@@ -130,13 +205,31 @@ export default function Stats() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Statistics</Text>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.headerTitle}>Statistics</Text>
+            {isPremium && <PremiumBadge variant="small" />}
+          </View>
           <Text style={styles.headerSubtitle}>Track your productivity</Text>
         </View>
         <TouchableOpacity onPress={handleRefresh} style={{ padding: 8 }}>
           <Text style={{ color: '#e74c3c', fontWeight: '600' }}>Refresh</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Time Range Selector */}
+      <View style={styles.section}>
+        <TimeRangeSelector />
+      </View>
+
+      {/* Show locked cards for premium features */}
+      {!isPremium && (selectedTimeRange === 'month' || selectedTimeRange === 'year' || selectedTimeRange === 'all-time') && (
+        <View style={styles.section}>
+          <StatisticsLockedCard 
+            timeRange={selectedTimeRange.charAt(0).toUpperCase() + selectedTimeRange.slice(1)}
+            style={{ marginBottom: 0 }}
+          />
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Today's Progress</Text>
@@ -170,6 +263,43 @@ export default function Stats() {
 
       <View style={styles.section}>
         <WeeklyChart />
+      </View>
+
+      {/* Session History Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Session History</Text>
+          {isPremium && (
+            <TouchableOpacity 
+              style={styles.exportButton}
+              onPress={() => {
+                // Data export functionality for premium users
+                Alert.alert(
+                  'Export Data', 
+                  'This feature will export your session data to CSV format.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Export CSV', onPress: () => {/* Implement export */} }
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="download" size={16} color="#4CAF50" />
+              <Text style={styles.exportButtonText}>Export</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {!isPremium ? (
+          <SessionHistoryLockedCard style={{ marginTop: 10 }} />
+        ) : (
+          <Text style={styles.placeholderText}>Recent sessions will appear here</Text>
+        )}
+        
+        {/* Data export locked card for free users */}
+        {!isPremium && (
+          <DataExportLockedCard style={{ marginTop: 15 }} />
+        )}
       </View>
 
       <View style={styles.section}>
@@ -224,15 +354,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 4,
+  },
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#666',
+  },
+  timeRangeContainer: {
+    paddingVertical: 10,
+  },
+  timeRangeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginRight: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeRangeButtonActive: {
+    backgroundColor: '#e74c3c',
+  },
+  timeRangeButtonLocked: {
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  timeRangeText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  timeRangeTextActive: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  timeRangeTextLocked: {
+    color: '#999',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#E8F5E8',
+    gap: 4,
+  },
+  exportButtonText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
   section: {
     backgroundColor: 'white',

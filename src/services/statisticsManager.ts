@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import premiumGate from './premiumGate';
 
 export interface DailyStats {
   date: string;
@@ -103,6 +104,138 @@ class StatisticsManager {
       console.error('Error getting weekly stats:', error);
       return [];
     }
+  }
+
+  // Get extended statistics (with premium gating)
+  async getExtendedStats(userId: string, timeRange: 'today' | 'week' | 'month' | 'year' | 'all-time'): Promise<DailyStats[] | null> {
+    const canAccess = premiumGate.canAccessStatistics(timeRange);
+    
+    if (!canAccess.canAccess) {
+      throw new Error(canAccess.upgradeMessage || `${timeRange} statistics require Premium`);
+    }
+
+    const cacheKey = `extendedStats-${userId}-${timeRange}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      let stats: DailyStats[] = [];
+      const today = new Date();
+
+      switch (timeRange) {
+        case 'today':
+          const todayStats = await this.getDailyStats(userId, today.toISOString().split('T')[0]);
+          stats = [todayStats];
+          break;
+
+        case 'week':
+          stats = await this.getWeeklyStats(userId);
+          break;
+
+        case 'month':
+          // Get last 30 days
+          for (let i = 29; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateString = date.toISOString().split('T')[0];
+            const dayStats = await this.getDailyStats(userId, dateString);
+            stats.push(dayStats);
+          }
+          break;
+
+        case 'year':
+          // Get last 365 days (aggregated by week for performance)
+          for (let i = 51; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (i * 7));
+            const weekStats = await this.getWeekRange(userId, date, 7);
+            stats.push(...weekStats);
+          }
+          break;
+
+        case 'all-time':
+          // This would need to be implemented more efficiently for large datasets
+          // For now, get last 2 years as a reasonable "all-time" view
+          for (let i = 729; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateString = date.toISOString().split('T')[0];
+            const dayStats = await this.getDailyStats(userId, dateString);
+            stats.push(dayStats);
+          }
+          break;
+      }
+
+      this.setCache(cacheKey, stats);
+      return stats;
+    } catch (error) {
+      console.error(`Error getting ${timeRange} stats:`, error);
+      return null;
+    }
+  }
+
+  // Get session history with premium gating
+  async getSessionHistory(userId: string, daysBack: number = 7): Promise<any[]> {
+    const canAccess = premiumGate.canAccessSessionHistory(daysBack);
+    
+    if (!canAccess.canAccess) {
+      throw new Error(canAccess.upgradeMessage || 'Extended session history requires Premium');
+    }
+
+    const cacheKey = `sessionHistory-${userId}-${daysBack}`;
+    const cached = this.getFromCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - daysBack);
+
+      const sessionsQuery = query(
+        collection(db, 'sessions'),
+        where('userId', '==', userId),
+        where('date', '>=', startDate.toISOString().split('T')[0]),
+        where('date', '<=', today.toISOString().split('T')[0]),
+        orderBy('startTime', 'desc')
+      );
+
+      const querySnapshot = await getDocs(sessionsQuery);
+      const sessions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      this.setCache(cacheKey, sessions);
+      return sessions;
+    } catch (error) {
+      console.error('Error getting session history:', error);
+      return [];
+    }
+  }
+
+  // Helper method to get a week range of stats
+  private async getWeekRange(userId: string, startDate: Date, days: number): Promise<DailyStats[]> {
+    const stats: DailyStats[] = [];
+    
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      const dateString = date.toISOString().split('T')[0];
+      const dayStats = await this.getDailyStats(userId, dateString);
+      stats.push(dayStats);
+    }
+    
+    return stats;
+  }
+
+  // Check if user can access specific time ranges
+  canAccessTimeRange(timeRange: 'today' | 'week' | 'month' | 'year' | 'all-time') {
+    return premiumGate.canAccessStatistics(timeRange);
+  }
+
+  // Check session history access
+  canAccessSessionHistory(daysBack: number = 7) {
+    return premiumGate.canAccessSessionHistory(daysBack);
   }
 
   // Get comprehensive user statistics

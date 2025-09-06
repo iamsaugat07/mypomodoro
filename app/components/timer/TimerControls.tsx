@@ -8,12 +8,12 @@ interface TimerControlsProps {
   onResetTimer: () => void;
 }
 
-const TimerControls: React.FC<TimerControlsProps> = ({
+const TimerControls = ({
   isSessionActive,
   isPaused,
   onToggleTimer,
   onResetTimer
-}) => {
+}: TimerControlsProps) => {
   const getButtonText = (): string => {
     if (isSessionActive && !isPaused) return 'PAUSE';
     if (isSessionActive && isPaused) return 'RESUME';

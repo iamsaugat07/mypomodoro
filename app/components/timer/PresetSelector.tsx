@@ -9,12 +9,12 @@ interface PresetSelectorProps {
   onCustomPreset: () => void;
 }
 
-const PresetSelector: React.FC<PresetSelectorProps> = ({
+const PresetSelector = ({
   presets,
   selectedPreset,
   onPresetChange,
   onCustomPreset
-}) => {
+}: PresetSelectorProps) => {
   const getPresetDisplayName = (preset: string): string => {
     switch (preset) {
       case 'pomodoro': return 'Classic';

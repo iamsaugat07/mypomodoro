@@ -29,6 +29,14 @@ export interface UserProfile {
   currentStreak: number;
   longestStreak: number;
   settings: UserSettings;
+  
+  // Subscription fields
+  subscriptionStatus: 'free' | 'premium' | 'expired';
+  subscriptionPlatform?: 'android';
+  subscriptionExpiresAt?: Timestamp;
+  subscriptionProductId?: string;
+  premiumFeaturesUsed: string[];
+  revenueCatCustomerId?: string;
 }
 
 export interface AuthContextType {
@@ -43,7 +51,7 @@ export interface AuthContextType {
 export interface PomodoroSession {
   id?: string;
   userId: string;
-  type: 'work' | 'short_break' | 'long_break';
+  type: 'work' | 'break' | 'longBreak';
   duration: number;
   completedAt: Timestamp;
   interrupted: boolean;

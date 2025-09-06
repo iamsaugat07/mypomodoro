@@ -15,20 +15,24 @@ import {
   serverTimestamp, 
   Timestamp 
 } from 'firebase/firestore';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 import { auth, db } from '../config/firebase';
 import { UserProfile, UserSettings } from '../types';
 
-WebBrowser.maybeCompleteAuthSession();
-
 // Google OAuth configuration from your Google Services files
 const GOOGLE_OAUTH_CONFIG = {
   iosClientId: '96748369657-95pplni45ck7ur52lh1pa5qv9mni1klh.apps.googleusercontent.com',
-  androidClientId: '96748369657-ofh8d6ehs4nsgfsddbblv3d29rciip3j.apps.googleusercontent.com',
+  androidClientId: '96748369657-oo6pf942ll19ootlrg1mqvincae9vrvv.apps.googleusercontent.com',
   expoClientId: '96748369657-10e7bht1ndqgr2n3rj6mqgva5387icqd.apps.googleusercontent.com'
 };
+
+// Configure Google Sign-In
+GoogleSignin.configure({
+  iosClientId: GOOGLE_OAUTH_CONFIG.iosClientId,
+  webClientId: GOOGLE_OAUTH_CONFIG.androidClientId, // Use Android client ID as web client ID
+  offlineAccess: true,
+});
 
 const defaultSettings: UserSettings = {
   notifications: true,
@@ -61,6 +65,12 @@ export const createUserProfile = async (user: User, additionalData?: any) => {
       currentStreak: 0,
       longestStreak: 0,
       settings: defaultSettings,
+      
+      // Default subscription fields
+      subscriptionStatus: 'free',
+      subscriptionPlatform: 'android',
+      premiumFeaturesUsed: [],
+      
       ...additionalData
     };
 
@@ -113,43 +123,67 @@ export const signInWithEmail = async (
 
 export const signInWithGoogle = async (): Promise<User> => {
   try {
-    let clientId = GOOGLE_OAUTH_CONFIG.expoClientId;
+    console.log('Starting Google Sign-In...');
     
-    // Use platform-specific client ID for production builds
-    if (Platform.OS === 'ios') {
-      clientId = GOOGLE_OAUTH_CONFIG.iosClientId;
-    } else if (Platform.OS === 'android') {
-      clientId = GOOGLE_OAUTH_CONFIG.androidClientId;
-    }
+    // Check if Google Play Services are available
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     
-    const request = new AuthSession.AuthRequest({
-      clientId,
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri: AuthSession.makeRedirectUri(),
-      responseType: AuthSession.ResponseType.IdToken,
+    // Sign in with Google
+    const response = await GoogleSignin.signIn();
+    console.log('Google Sign-In Response:', {
+      type: response.type,
+      data: response.data ? {
+        user: response.data.user?.email,
+        hasIdToken: !!response.data.idToken
+      } : null
     });
 
-    const result = await request.promptAsync({
-      authorizationEndpoint: 'https://accounts.google.com/oauth/authorize',
-    });
-
-    if (result.type === 'success' && result.params.id_token) {
-      const googleCredential = GoogleAuthProvider.credential(result.params.id_token);
+    if (response.type === 'success' && response.data?.idToken) {
+      // Create Firebase credential from Google ID token
+      const googleCredential = GoogleAuthProvider.credential(response.data.idToken);
+      
+      // Sign in to Firebase with the Google credential
       const { user } = await signInWithCredential(auth, googleCredential);
+      
+      // Create or update user profile
       await createUserProfile(user);
+      
+      console.log('Firebase sign-in successful:', user.email);
       return user;
+    } else if (response.type === 'cancelled') {
+      throw new Error('Google sign-in was cancelled');
     } else {
-      throw new Error('Google sign-in was cancelled or failed');
+      throw new Error('Google sign-in failed: No ID token received');
     }
   } catch (error: any) {
     console.error('Error signing in with Google:', error);
-    throw new Error(error.message || 'Failed to sign in with Google');
+    
+    // Handle specific Google Sign-In errors
+    if (error.code === 'SIGN_IN_CANCELLED') {
+      throw new Error('Sign-in was cancelled');
+    } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+      throw new Error('Google Play Services not available');
+    } else if (error.code === 'SIGN_IN_REQUIRED') {
+      throw new Error('Sign-in required');
+    } else {
+      throw new Error(error.message || 'Failed to sign in with Google');
+    }
   }
 };
 
 export const signOut = async (): Promise<void> => {
   try {
+    // Sign out from Firebase
     await firebaseSignOut(auth);
+    
+    // Sign out from Google
+    try {
+      await GoogleSignin.signOut();
+    } catch (googleError) {
+      console.warn('Google sign out failed:', googleError);
+      // Continue with Firebase sign out even if Google sign out fails
+    }
+    
     console.log('User signed out successfully');
   } catch (error: any) {
     console.error('Error signing out:', error);
@@ -194,6 +228,28 @@ export const updateUserSettings = async (
     console.log('User settings updated successfully');
   } catch (error) {
     console.error('Error updating user settings:', error);
+    throw error;
+  }
+};
+
+export const updateUserSubscription = async (
+  uid: string,
+  subscriptionData: {
+    subscriptionStatus: 'free' | 'premium' | 'expired';
+    subscriptionExpiresAt?: Timestamp;
+    subscriptionProductId?: string;
+    revenueCatCustomerId?: string;
+  }
+): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+      ...subscriptionData,
+      lastActiveAt: serverTimestamp()
+    }, { merge: true });
+    console.log('User subscription updated successfully');
+  } catch (error) {
+    console.error('Error updating user subscription:', error);
     throw error;
   }
 };

@@ -11,10 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/providers/auth';
+import { ManageSubscription } from '../components/subscription/ManageSubscription';
+import { UserSettings } from '../../src/types';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
@@ -32,7 +34,7 @@ export default function Settings() {
 
   const handleSettingChange = async (key: string, value: boolean) => {
     // Simplified for now - you can implement Firebase update logic here
-    setSettings(prev => ({ ...prev, [key]: value }));
+    setSettings(prev => prev ? { ...prev, [key]: value } : null);
   };
 
   const handleSignOut = () => {
@@ -151,6 +153,9 @@ export default function Settings() {
           value={settings?.notifications ?? true}
         />
       </View>
+
+      {/* Subscription Management */}
+      <ManageSubscription />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Auto-Start</Text>
