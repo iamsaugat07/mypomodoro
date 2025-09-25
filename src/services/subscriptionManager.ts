@@ -19,6 +19,7 @@ class SubscriptionManager {
   private static instance: SubscriptionManager;
   private currentSubscription: SubscriptionInfo | null = null;
   private listeners: ((info: SubscriptionInfo) => void)[] = [];
+  private isInitialized: boolean = false;
 
   private constructor() {}
 
@@ -30,16 +31,22 @@ class SubscriptionManager {
   }
 
   async initialize(revenueCatApiKey: string): Promise<void> {
+    if (this.isInitialized) {
+      console.log('✅ Revenue Cat already initialized, skipping...');
+      return;
+    }
+
     try {
       await Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
       await Purchases.configure({ apiKey: revenueCatApiKey });
-      
+
       // Get initial customer info
       await this.refreshSubscriptionStatus();
-      
+
       // Listen for updates
       Purchases.addCustomerInfoUpdateListener(this.handleCustomerInfoUpdate.bind(this));
-      
+
+      this.isInitialized = true;
       console.log('✅ Revenue Cat initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Revenue Cat:', error);

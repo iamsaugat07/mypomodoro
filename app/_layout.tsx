@@ -1,10 +1,9 @@
 import { Stack } from "expo-router/stack";
-import { View, ActivityIndicator, Platform } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "../src/providers/auth";
 import { SubscriptionProvider } from "../src/providers/subscription";
-import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
@@ -15,7 +14,6 @@ function RootLayoutNav() {
     if (loading) return; // Don't redirect while loading
 
     const inAuthGroup = segments[0] === "auth";
-    const inTabsGroup = segments[0] === "(tabs)";
 
     if (!user && !inAuthGroup) {
       // User not authenticated and not on auth screen, redirect to auth

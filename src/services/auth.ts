@@ -23,14 +23,14 @@ import { UserProfile, UserSettings } from '../types';
 // Google OAuth configuration from your Google Services files
 const GOOGLE_OAUTH_CONFIG = {
   iosClientId: '96748369657-95pplni45ck7ur52lh1pa5qv9mni1klh.apps.googleusercontent.com',
-  androidClientId: '96748369657-oo6pf942ll19ootlrg1mqvincae9vrvv.apps.googleusercontent.com',
+  androidClientId: '96748369657-8cigedun5eaidufee11l6bes14bmaou7.apps.googleusercontent.com',
   expoClientId: '96748369657-10e7bht1ndqgr2n3rj6mqgva5387icqd.apps.googleusercontent.com'
 };
 
 // Configure Google Sign-In
 GoogleSignin.configure({
   iosClientId: GOOGLE_OAUTH_CONFIG.iosClientId,
-  webClientId: GOOGLE_OAUTH_CONFIG.androidClientId, // Use Android client ID as web client ID
+  webClientId: GOOGLE_OAUTH_CONFIG.expoClientId, // Use web client ID for Firebase auth
   offlineAccess: true,
 });
 

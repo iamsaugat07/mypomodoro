@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomTimerModal from '../CustomTimerModal';
 import TimerDisplay from './TimerDisplay';
 import TimerControls from './TimerControls';
@@ -9,6 +10,7 @@ import { useTimerLogic } from '../../../src/hooks/useTimerLogic';
 
 export default function TimerScreen() {
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
+  const insets = useSafeAreaInsets();
   
   const {
     timeLeft,
@@ -30,6 +32,7 @@ export default function TimerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: sessionColor }]}>
       <StatusBar style="light" />
+      <View style={[styles.statusBarBackground, { backgroundColor: sessionColor, height: insets.top }]} />
       
       <TimerDisplay
         timeLeft={timeLeft}
@@ -68,5 +71,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  statusBarBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
 });

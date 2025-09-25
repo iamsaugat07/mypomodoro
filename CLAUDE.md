@@ -1,16 +1,50 @@
-# 📋 Coding Standards & Guidelines
+# CLAUDE.md
+
+This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 🎯 Project Philosophy
 
 This Pomodoro app follows **enterprise-grade development practices** with emphasis on:
 - **Reliability** - Robust error handling and data integrity
-- **Performance** - Optimized for mobile with real-time capabilities  
+- **Performance** - Optimized for mobile with real-time capabilities
 - **Maintainability** - Clean architecture with clear separation of concerns
 - **Scalability** - Built to handle production workloads
 
-## 🏗️ Architecture Principles
+## Development Commands
 
-### 1. Service-Oriented Architecture
+### Running the Application
+```bash
+npm start                    # Start Expo development server
+npm run android             # Run on Android device/emulator
+npm run ios                 # Run on iOS device/simulator
+npm run web                 # Run web version
+```
+
+### Building
+```bash
+# Development builds
+eas build --profile development --platform ios
+eas build --profile development --platform android
+
+# Preview builds for testing
+eas build --profile preview --platform ios
+eas build --profile preview --platform android
+
+# Production builds
+eas build --profile production --platform ios
+eas build --profile production --platform android
+```
+
+### Testing & Quality
+```bash
+npx tsc --noEmit           # Type checking
+```
+
+## 🏗️ Architecture Overview
+
+This is a React Native Expo app with a service-oriented architecture built around Firebase.
+
+### Service-Oriented Architecture Pattern
 ```
 Services → Hooks → Components
    ↓        ↓         ↓
@@ -23,7 +57,7 @@ Business  React    UI Logic
 - Handle Firebase operations, data validation, caching
 - Export singleton instances: `export const serviceName = new ServiceClass()`
 
-**Hooks** (`src/hooks/`)  
+**Hooks** (`src/hooks/`)
 - Bridge between services and React components
 - Manage React state and side effects
 - Pattern: `useServiceName()` returns interface with actions and state
@@ -33,24 +67,66 @@ Business  React    UI Logic
 - Use hooks for data and state management
 - Follow React best practices
 
-### 2. Data Flow Pattern
+### Data Flow Pattern
 ```
 User Action → Hook → Service → Firebase → Real-time Update → Hook → UI
 ```
 
-## 📁 File Organization
-
-### Directory Structure
+For offline scenarios:
 ```
-src/
+User Action → Hook → Service → Local Queue → Background Sync → Firebase
+```
+
+### Core Structure
+```
+app/                       # Expo Router file-based routing
+├── (tabs)/               # Main tabbed interface
+│   ├── index.tsx         # Timer screen
+│   ├── stats.tsx         # Statistics dashboard
+│   └── settings.tsx      # User settings
+├── auth/                 # Authentication screens
+└── components/           # UI components organized by feature
+
+src/                      # Business logic and services
 ├── config/          # App and Firebase configuration
-├── services/        # Business logic services
+├── services/        # Core business services
 ├── hooks/           # React hooks for state management
 ├── providers/       # React context providers
 ├── types/           # TypeScript definitions
 ├── components/      # Reusable UI components
 └── utils/           # Pure utility functions
 ```
+
+### Key Services (`src/services/`)
+- **sessionManager.ts** - Session lifecycle, Firebase sync, offline queuing
+- **timerManager.ts** - Advanced timer with background execution
+- **statisticsManager.ts** - Real-time statistics with Firestore listeners
+- **settingsManager.ts** - Settings persistence with validation
+- **auth.ts** - Firebase authentication (email/password + Google OAuth)
+- **subscriptionManager.ts** - Premium subscription handling via React Native Purchases
+- **analyticsManager.ts** - Performance monitoring and error tracking
+- **dataValidator.ts** & **dataRecovery.ts** - Data integrity and recovery
+
+### State Management Pattern
+The app uses a hook-based architecture where services are wrapped in React hooks:
+- **useSessionManager.ts** - Session state management
+- **useAdvancedTimer.ts** - Timer state with interruption handling
+- **useStatistics.ts** - Real-time statistics updates
+- **useSettings.ts** - Settings state management
+
+### Firebase Integration
+- **Authentication**: Email/password and Google OAuth
+- **Firestore**: Real-time session tracking and statistics
+- **Offline Support**: Firestore offline persistence with custom queuing
+- **Security Rules**: Configured for user-scoped data access
+
+### Premium Features
+The app includes premium functionality gated through `premiumGate.ts` and managed via React Native Purchases. Premium features are controlled throughout the UI with `PremiumBadge` and `FeatureLockedCard` components.
+
+### Authentication Flow
+Google OAuth is configured for both platforms with proper URL schemes. Authentication state is managed globally through Firebase Auth with automatic persistence.
+
+## 📁 File Organization & Naming
 
 ### File Naming Convention
 - **Files**: camelCase (`sessionManager.ts`, `useStatistics.ts`)
@@ -67,7 +143,7 @@ src/
 export class ServiceManager {
   private cache: Map<string, any> = new Map();
   private listeners: Map<string, Unsubscribe> = new Map();
-  
+
   // Public methods - main functionality
   async performAction(params: ActionParams): Promise<ActionResult> {
     try {
@@ -78,12 +154,12 @@ export class ServiceManager {
       throw error;
     }
   }
-  
-  // Private methods - internal logic  
+
+  // Private methods - internal logic
   private async helperMethod(): Promise<void> {
     // Implementation
   }
-  
+
   // Cleanup method
   cleanup(): void {
     this.listeners.forEach(unsubscribe => unsubscribe());
@@ -106,15 +182,15 @@ async performOperation(data: OperationData): Promise<Result> {
   } catch (error) {
     // Log error
     console.error('Operation failed:', error);
-    
+
     // Track error for analytics
     analyticsManager.trackError('operation_failed', error.message, userId);
-    
+
     // Handle offline scenarios
     if (error.code === 'unavailable') {
       await this.queueForOffline(data);
     }
-    
+
     // Re-throw for caller to handle
     throw error;
   }
@@ -126,7 +202,7 @@ async performOperation(data: OperationData): Promise<Result> {
 // Standard real-time subscription pattern
 subscribeToData(userId: string, callback: (data: DataType) => void): () => void {
   const query = createFirestoreQuery(userId);
-  
+
   const unsubscribe = onSnapshot(query, (snapshot) => {
     try {
       const data = processSnapshot(snapshot);
@@ -136,10 +212,10 @@ subscribeToData(userId: string, callback: (data: DataType) => void): () => void 
       analyticsManager.trackError('snapshot_error', error.message);
     }
   });
-  
+
   // Store for cleanup
   this.listeners.set(userId, unsubscribe);
-  
+
   return () => {
     this.unsubscribeFromData(userId);
   };
@@ -163,8 +239,8 @@ export interface UseServiceReturn {
   data: DataType | null;
   loading: boolean;
   error: string | null;
-  
-  // Actions  
+
+  // Actions
   performAction: (params: ActionParams) => Promise<void>;
   refreshData: () => Promise<void>;
 }
@@ -173,7 +249,7 @@ export const useService = (): UseServiceReturn => {
   const [data, setData] = useState<DataType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Initialize and subscribe to data
   useEffect(() => {
     if (user) {
@@ -185,11 +261,11 @@ export const useService = (): UseServiceReturn => {
           setError(null);
         }
       );
-      
+
       return () => unsubscribe();
     }
   }, [user]);
-  
+
   const performAction = useCallback(async (params: ActionParams): Promise<void> => {
     try {
       setError(null);
@@ -199,7 +275,7 @@ export const useService = (): UseServiceReturn => {
       console.error('Hook action error:', err);
     }
   }, []);
-  
+
   return {
     data,
     loading,
@@ -301,21 +377,6 @@ const Layout = ({ backgroundColor = '#fff', children }: LayoutProps) => {
   );
 };
 
-// ✅ RECOMMENDED: Optional children when sometimes needed
-interface CardProps {
-  title: string;
-  children?: React.ReactNode;
-}
-
-const Card = ({ title, children }: CardProps) => {
-  return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
-      {children}
-    </View>
-  );
-};
-
 // ❌ AVOID: React.FC is discouraged by React team
 const BadComponent: React.FC<ButtonProps> = ({ title, onPress }) => {
   // Issues with React.FC:
@@ -329,23 +390,10 @@ const BadComponent: React.FC<ButtonProps> = ({ title, onPress }) => {
 
 **Why Plain Functions Are Better:**
 - **Type Safety**: No implicit `children` prop
-- **Performance**: No wrapper overhead  
+- **Performance**: No wrapper overhead
 - **Clarity**: Explicit about what props are accepted
 - **Modern**: Aligned with React 18+ patterns
 - **React Native**: Matches RN documentation examples
-
-### Strict Type Checking
-```typescript
-// Enable strict TypeScript settings
-{
-  "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noUnusedLocals": true
-  }
-}
-```
 
 ## ⚡ Performance Standards
 
@@ -400,7 +448,7 @@ analyticsManager.trackPerformance('operation_name', duration, userId);
 analyticsManager.trackUserInteraction('button_pressed', 'screen_name', userId);
 ```
 
-### Error Tracking  
+### Error Tracking
 ```typescript
 // Comprehensive error tracking
 try {
@@ -408,7 +456,7 @@ try {
 } catch (error) {
   analyticsManager.trackError(
     'operation_failed',
-    error.message, 
+    error.message,
     userId,
     error.stack,
     { context: additionalInfo }
@@ -416,64 +464,19 @@ try {
 }
 ```
 
-## 🧪 Testing Standards
+## Key Configuration Files
 
-### Unit Test Pattern
-```typescript
-describe('ServiceManager', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-  
-  it('should handle successful operation', async () => {
-    const result = await serviceManager.performAction(validData);
-    expect(result).toBeDefined();
-    expect(analyticsManager.trackError).not.toHaveBeenCalled();
-  });
-  
-  it('should handle operation failure', async () => {
-    mockFirestore.mockRejectedValueOnce(new Error('Network error'));
-    
-    await expect(serviceManager.performAction(validData))
-      .rejects.toThrow('Network error');
-    
-    expect(analyticsManager.trackError).toHaveBeenCalledWith(
-      'operation_failed',
-      'Network error',
-      expect.any(String)
-    );
-  });
-});
-```
+- **app.json** - Expo configuration with Firebase setup for both iOS/Android
+- **eas.json** - EAS Build profiles (development, preview, production)
+- **google-services.json** & **GoogleService-Info.plist** - Firebase configuration files
 
-## 📝 Documentation Standards
+## Development Patterns
 
-### Code Documentation
-```typescript
-/**
- * Manages user session lifecycle with Firebase persistence
- * Handles offline queuing and conflict resolution
- */
-export class SessionManager {
-  
-  /**
-   * Start a new Pomodoro session
-   * @param userId - User identifier
-   * @param type - Session type (work/break/longBreak)  
-   * @param duration - Session duration in seconds
-   * @returns Promise resolving to session ID
-   */
-  async startSession(userId: string, type: SessionType, duration: number): Promise<string> {
-    // Implementation
-  }
-}
-```
+### Service Layer Usage
+Services are singleton classes that handle business logic and Firebase operations. Always use the corresponding hooks in components rather than calling services directly.
 
-### README Updates
-- Keep documentation current with implementation
-- Include setup instructions and troubleshooting
-- Document API changes and breaking changes
-- Provide examples for common use cases
+### Offline-First Architecture
+All Firebase operations are queued locally when offline and synced when connectivity returns. This is handled automatically by the service layer.
 
 ## ✅ Code Review Checklist
 
@@ -497,6 +500,16 @@ export class SessionManager {
 - [ ] Real-time subscriptions properly cleaned up
 - [ ] Offline scenarios handled appropriately
 
+## Important Instructions
+
+### Do what has been asked; nothing more, nothing less.
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User
+
+### Code Quality Priority
+Code quality is more important than speed. Take time to implement proper error handling, performance monitoring, and maintainable architecture patterns.
+
 ---
 
-**Remember**: Code quality is more important than speed. Take time to implement proper error handling, performance monitoring, and maintainable architecture patterns.
+**Remember**: This codebase prioritizes reliability, maintainability, and performance. Follow the established patterns and always implement comprehensive error handling and analytics tracking.

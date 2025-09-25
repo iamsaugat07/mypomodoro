@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/providers/auth';
@@ -21,6 +22,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const insets = useSafeAreaInsets();
   
   const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
 
@@ -75,15 +77,19 @@ export default function AuthScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar style="light" backgroundColor="#e74c3c" translucent={false} />
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      {/* Status bar background for edge-to-edge */}
+      <View style={[styles.statusBarBackground, { height: insets.top }]} />
+      
+      <KeyboardAvoidingView 
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
@@ -186,8 +192,9 @@ export default function AuthScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -195,6 +202,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#e74c3c',
+  },
+  statusBarBackground: {
+    backgroundColor: '#e74c3c',
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,
