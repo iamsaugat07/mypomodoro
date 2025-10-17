@@ -40,4 +40,3 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-ServiceAccountPomodoro.json

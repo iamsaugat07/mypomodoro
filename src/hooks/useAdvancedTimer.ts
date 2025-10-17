@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AppState, Alert } from 'react-native';
 import { timerManager, TimerState } from '../services/timerManager';
-import { useSessionManager } from './useSessionManager';
 
 export interface UseAdvancedTimerReturn {
   timerState: TimerState;
