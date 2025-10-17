@@ -19,7 +19,7 @@ export interface UseAdvancedTimerReturn {
 export const useAdvancedTimer = (): UseAdvancedTimerReturn => {
   const [timerState, setTimerState] = useState<TimerState>(timerManager.getTimerState());
   const [currentElapsedTime, setCurrentElapsedTime] = useState(0);
-  const { activeSession } = useSessionManager();
+  //const { activeSession } = useSessionManager();
 
   // Update elapsed time every second
   useEffect(() => {

@@ -20,19 +20,28 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pomodorotimer.app",
+      "bundleIdentifier": "com.pomodorotimerbysaugat.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1.0.0",
       "infoPlist": {
+        "NSUserNotificationsUsageDescription": "This app needs notification permissions to alert you when your Pomodoro timer sessions complete.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "pomodoroapp",
             "CFBundleURLSchemes": [
               "pomodoroapp",
-              "com.pomodorotimer.app"
+              "com.pomodorotimerbysaugat.app"
+            ]
+          },
+          {
+            "CFBundleURLName": "pomodoroapp",
+            "CFBundleURLSchemes": [
+              "pomodoroapp",
+              "com.pomodorotimerbysaugat.app"
             ]
           }
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -59,7 +68,10 @@
               "host": "pomodorotimerbysaugat.app"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },

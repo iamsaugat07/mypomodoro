@@ -264,6 +264,4 @@ Your subscription system is now **fully integrated** into:
 
 Just configure your Revenue Cat products and Google Play Console subscriptions, then you're ready to start generating revenue! 💰
 
----
 
-_🤖 Generated with [Claude Code](https://claude.ai/code)_
