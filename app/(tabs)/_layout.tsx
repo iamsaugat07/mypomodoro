@@ -1,16 +1,16 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#e74c3c',
-        tabBarInactiveTintColor: '#8e8e93',
+        tabBarActiveTintColor: "#e74c3c",
+        tabBarInactiveTintColor: "#8e8e93",
         tabBarStyle: {
-          backgroundColor: 'white',
+          backgroundColor: "white",
           borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
+          borderTopColor: "#e0e0e0",
         },
         headerShown: false,
       }}
@@ -18,27 +18,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Timer',
+          title: "Timer",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="timer-outline" size={size} color={color} />
+            <MaterialIcons name="av-timer" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
-          title: 'Stats',
+          title: "Stats",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
+            <MaterialIcons name="bar-chart" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: "Settings",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <MaterialIcons name="settings" size={size} color={color} />
           ),
         }}
       />

@@ -83,7 +83,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.96748369657-95pplni45ck7ur52lh1pa5qv9mni1klh"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ],
     "extra": {
       "router": {
