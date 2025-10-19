@@ -15,9 +15,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#e74c3c"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pomodorotimerbysaugat.app",
@@ -68,10 +66,7 @@
               "host": "pomodorotimerbysaugat.app"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
@@ -81,6 +76,14 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.96748369657-95pplni45ck7ur52lh1pa5qv9mni1klh"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ],
       "expo-asset",

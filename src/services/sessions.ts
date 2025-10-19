@@ -1,17 +1,15 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  getDocs,
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs
+} from '@react-native-firebase/firestore';
+import { db, serverTimestamp, FirebaseTimestamp } from '../config/firebase';
 import { PomodoroSession } from '../types';
 
 export const createSession = async (
@@ -72,14 +70,14 @@ export const getUserSessions = async (
     const querySnapshot = await getDocs(q);
     const sessions: PomodoroSession[] = [];
 
-    querySnapshot.forEach((doc) => {
+    querySnapshot.forEach((doc: any) => {
       const data = doc.data();
       sessions.push({
         id: doc.id,
         userId: data.userId,
         type: data.type,
         duration: data.actualDuration || data.plannedDuration || 0,
-        completedAt: data.completedAt || Timestamp.now(),
+        completedAt: data.completedAt || FirebaseTimestamp.now(),
         interrupted: data.interrupted || false,
         date: data.date
       });

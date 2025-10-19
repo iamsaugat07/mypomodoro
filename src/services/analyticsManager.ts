@@ -1,6 +1,6 @@
+import { collection, addDoc } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { firebaseAnalytics, db, serverTimestamp } from '../config/firebase';
 
 export interface PerformanceMetric {
   eventName: string;
@@ -79,6 +79,14 @@ export class AnalyticsManager {
       metadata
     };
 
+    // Log to Firebase Analytics
+    firebaseAnalytics.logEvent('performance_metric', {
+      event_name: eventName,
+      duration_ms: duration,
+      user_id: userId,
+      ...metadata
+    });
+
     this.eventQueue.push(metric);
     this.checkFlushQueue();
   }
@@ -92,6 +100,14 @@ export class AnalyticsManager {
       userId,
       context
     };
+
+    // Log to Firebase Analytics
+    firebaseAnalytics.logEvent('user_interaction', {
+      action,
+      screen_name: screen,
+      user_id: userId,
+      ...context
+    });
 
     this.eventQueue.push(interaction);
     this.checkFlushQueue();
@@ -108,8 +124,17 @@ export class AnalyticsManager {
       context
     };
 
+    // Log to Firebase Analytics
+    firebaseAnalytics.logEvent('app_error', {
+      error_type: errorType,
+      error_message: errorMessage.substring(0, 100), // Limit length
+      user_id: userId,
+      has_stack: !!stack,
+      ...context
+    });
+
     this.eventQueue.push(errorEvent);
-    
+
     // Flush errors immediately for critical issues
     if (errorType === 'crash' || errorType === 'critical') {
       this.flushEvents();
@@ -316,11 +341,15 @@ export class AnalyticsManager {
 
   // Set user ID for all future events
   setUserId(userId: string): void {
+    // Set user ID in Firebase Analytics
+    firebaseAnalytics.setUserId(userId);
     this.trackUserInteraction('user_identified', 'system', userId);
   }
 
   // Clear user session
   clearUserSession(): void {
+    // Clear user ID in Firebase Analytics
+    firebaseAnalytics.setUserId(null);
     this.trackUserInteraction('user_logged_out', 'system');
   }
 

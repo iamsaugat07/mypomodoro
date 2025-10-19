@@ -1,4 +1,4 @@
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserSettings, TimerPreset } from '../types';
@@ -43,15 +43,15 @@ class SettingsManager {
       // Try Firebase
       const userRef = doc(db, 'users', userId);
       const userDoc = await getDoc(userRef);
-      
+
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        const settings = userData.settings || this.DEFAULT_SETTINGS;
-        
+        const settings = userData?.settings || this.DEFAULT_SETTINGS;
+
         // Validate and merge with defaults
         const validatedSettings = this.validateAndMergeSettings(settings);
         this.cachedSettings = validatedSettings;
-        
+
         // Cache locally
         await this.cacheSettingsLocally(validatedSettings);
         return validatedSettings;
@@ -60,8 +60,8 @@ class SettingsManager {
       return this.DEFAULT_SETTINGS;
     } catch (error) {
       console.error('Error loading settings:', error);
-      analyticsManager.trackError('settings_load_failed', error.message, userId);
-      
+      analyticsManager.trackError('settings_load_failed', (error as any).message, userId);
+
       // Try local cache as fallback
       const cached = await this.getCachedSettings();
       return cached || this.DEFAULT_SETTINGS;
@@ -90,15 +90,15 @@ class SettingsManager {
       await this.cacheSettingsLocally(updatedSettings);
 
       return []; // No errors
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving settings:', error);
       analyticsManager.trackError('settings_save_failed', error.message, userId);
-      
+
       // Handle offline scenarios
       if (error.code === 'unavailable') {
         await this.queueSettingsForOffline(settings);
       }
-      
+
       throw error;
     }
   }
@@ -288,7 +288,7 @@ class SettingsManager {
   private async cacheSettingsLocally(settings: UserSettings): Promise<void> {
     try {
       await AsyncStorage.setItem('userSettings', JSON.stringify(settings));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error caching settings:', error);
       analyticsManager.trackError('settings_cache_failed', error.message);
     }
@@ -298,7 +298,7 @@ class SettingsManager {
     try {
       const cached = await AsyncStorage.getItem('userSettings');
       return cached ? JSON.parse(cached) : null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting cached settings:', error);
       analyticsManager.trackError('settings_cache_read_failed', error.message);
       return null;
@@ -310,7 +310,7 @@ class SettingsManager {
     try {
       this.offlineChanges.push(settings);
       await AsyncStorage.setItem('offlineSettingsChanges', JSON.stringify(this.offlineChanges));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error queuing settings for offline:', error);
       analyticsManager.trackError('settings_offline_queue_failed', error.message);
     }
@@ -334,7 +334,7 @@ class SettingsManager {
         
         console.log(`Processed ${changes.length} offline settings changes`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing offline settings changes:', error);
       analyticsManager.trackError('settings_offline_process_failed', error.message, userId);
     }

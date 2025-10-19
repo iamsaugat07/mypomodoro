@@ -1,24 +1,11 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithCredential,
-  User,
-  onAuthStateChanged
-} from 'firebase/auth';
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  serverTimestamp, 
-  Timestamp 
-} from 'firebase/firestore';
+import auth, { FirebaseAuthTypes, onAuthStateChanged as authStateListener } from '@react-native-firebase/auth';
+import { doc, getDoc, setDoc } from '@react-native-firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { Platform } from 'react-native';
-import { auth, db } from '../config/firebase';
+import { firebaseAuth, db, serverTimestamp, FirebaseTimestamp } from '../config/firebase';
 import { UserProfile, UserSettings } from '../types';
+
+// Type alias for Firebase User
+type User = FirebaseAuthTypes.User;
 
 // Google OAuth configuration from your Google Services files
 const GOOGLE_OAUTH_CONFIG = {
@@ -65,12 +52,12 @@ export const createUserProfile = async (user: User, additionalData?: any) => {
       currentStreak: 0,
       longestStreak: 0,
       settings: defaultSettings,
-      
+
       // Default subscription fields
       subscriptionStatus: 'free',
       subscriptionPlatform: 'android',
       premiumFeaturesUsed: [],
-      
+
       ...additionalData
     };
 
@@ -82,8 +69,8 @@ export const createUserProfile = async (user: User, additionalData?: any) => {
       throw error;
     }
   } else {
-    await setDoc(userRef, { 
-      lastActiveAt: serverTimestamp() 
+    await setDoc(userRef, {
+      lastActiveAt: serverTimestamp()
     }, { merge: true });
     console.log('User last active time updated');
   }
@@ -92,13 +79,13 @@ export const createUserProfile = async (user: User, additionalData?: any) => {
 };
 
 export const signUpWithEmail = async (
-  email: string, 
-  password: string, 
+  email: string,
+  password: string,
   displayName: string
 ): Promise<User> => {
   try {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(user, { displayName });
+    const { user } = await firebaseAuth.createUserWithEmailAndPassword(email, password);
+    await user.updateProfile({ displayName });
     await createUserProfile(user, { displayName });
     return user;
   } catch (error: any) {
@@ -108,11 +95,11 @@ export const signUpWithEmail = async (
 };
 
 export const signInWithEmail = async (
-  email: string, 
+  email: string,
   password: string
 ): Promise<User> => {
   try {
-    const { user } = await signInWithEmailAndPassword(auth, email, password);
+    const { user } = await firebaseAuth.signInWithEmailAndPassword(email, password);
     await createUserProfile(user);
     return user;
   } catch (error: any) {
@@ -124,10 +111,10 @@ export const signInWithEmail = async (
 export const signInWithGoogle = async (): Promise<User> => {
   try {
     console.log('Starting Google Sign-In...');
-    
+
     // Check if Google Play Services are available
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    
+
     // Sign in with Google
     const response = await GoogleSignin.signIn();
     console.log('Google Sign-In Response:', {
@@ -140,14 +127,14 @@ export const signInWithGoogle = async (): Promise<User> => {
 
     if (response.type === 'success' && response.data?.idToken) {
       // Create Firebase credential from Google ID token
-      const googleCredential = GoogleAuthProvider.credential(response.data.idToken);
-      
+      const googleCredential = auth.GoogleAuthProvider.credential(response.data.idToken);
+
       // Sign in to Firebase with the Google credential
-      const { user } = await signInWithCredential(auth, googleCredential);
-      
+      const { user } = await firebaseAuth.signInWithCredential(googleCredential);
+
       // Create or update user profile
       await createUserProfile(user);
-      
+
       console.log('Firebase sign-in successful:', user.email);
       return user;
     } else if (response.type === 'cancelled') {
@@ -157,7 +144,7 @@ export const signInWithGoogle = async (): Promise<User> => {
     }
   } catch (error: any) {
     console.error('Error signing in with Google:', error);
-    
+
     // Handle specific Google Sign-In errors
     if (error.code === 'SIGN_IN_CANCELLED') {
       throw new Error('Sign-in was cancelled');
@@ -174,8 +161,8 @@ export const signInWithGoogle = async (): Promise<User> => {
 export const signOut = async (): Promise<void> => {
   try {
     // Sign out from Firebase
-    await firebaseSignOut(auth);
-    
+    await firebaseAuth.signOut();
+
     // Sign out from Google
     try {
       await GoogleSignin.signOut();
@@ -183,7 +170,7 @@ export const signOut = async (): Promise<void> => {
       console.warn('Google sign out failed:', googleError);
       // Continue with Firebase sign out even if Google sign out fails
     }
-    
+
     console.log('User signed out successfully');
   } catch (error: any) {
     console.error('Error signing out:', error);
@@ -195,17 +182,17 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
   try {
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
-    
+
     if (userSnap.exists()) {
       const data = userSnap.data();
-      return { 
-        uid, 
+      return {
+        uid,
         ...data,
-        createdAt: data.createdAt || Timestamp.now(),
-        lastActiveAt: data.lastActiveAt || Timestamp.now(),
+        createdAt: data?.createdAt || FirebaseTimestamp.now(),
+        lastActiveAt: data?.lastActiveAt || FirebaseTimestamp.now(),
       } as UserProfile;
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error getting user profile:', error);
@@ -214,7 +201,7 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
 };
 
 export const updateUserSettings = async (
-  uid: string, 
+  uid: string,
   settings: Partial<UserSettings>
 ): Promise<void> => {
   try {
@@ -236,7 +223,7 @@ export const updateUserSubscription = async (
   uid: string,
   subscriptionData: {
     subscriptionStatus: 'free' | 'premium' | 'expired';
-    subscriptionExpiresAt?: Timestamp;
+    subscriptionExpiresAt?: typeof FirebaseTimestamp;
     subscriptionProductId?: string;
     revenueCatCustomerId?: string;
   }
@@ -254,5 +241,7 @@ export const updateUserSubscription = async (
   }
 };
 
-// Export the auth state change listener for the provider
-export { onAuthStateChanged };
+// Export the auth state change listener for the provider (modular API)
+export const onAuthStateChanged = (callback: (user: User | null) => void) => {
+  return authStateListener(firebaseAuth, callback);
+};

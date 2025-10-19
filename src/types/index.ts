@@ -1,4 +1,7 @@
-import { Timestamp } from 'firebase/firestore';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+
+// Type alias for Firestore Timestamp
+type Timestamp = FirebaseFirestoreTypes.Timestamp;
 
 export interface UserSettings {
   notifications: boolean;

@@ -1,20 +1,15 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  serverTimestamp,
-  increment,
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
   runTransaction,
-  writeBatch,
-  Timestamp,
   query,
   where,
   limit,
   getDocs,
-  setDoc
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
+} from '@react-native-firebase/firestore';
+import { db, serverTimestamp, increment, FirebaseTimestamp } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SessionData {
@@ -24,8 +19,8 @@ export interface SessionData {
   type: 'work' | 'break' | 'longBreak';
   plannedDuration: number; // in seconds
   actualDuration?: number;
-  startTime: Timestamp;
-  endTime?: Timestamp;
+  startTime: typeof FirebaseTimestamp;
+  endTime?: typeof FirebaseTimestamp;
   completed: boolean;
   interrupted: boolean;
   cancelled: boolean;
@@ -52,15 +47,15 @@ class SessionManager {
 
   // Start a new session
   async startSession(
-    userId: string, 
-    type: 'work' | 'break' | 'longBreak', 
+    userId: string,
+    type: 'work' | 'break' | 'longBreak',
     duration: number
   ): Promise<string> {
     const sessionData: Omit<SessionData, 'id'> = {
       userId,
       type,
       plannedDuration: duration,
-      startTime: Timestamp.now(),
+      startTime: FirebaseTimestamp.now() as any,
       completed: false,
       interrupted: false,
       cancelled: false,
@@ -73,7 +68,7 @@ class SessionManager {
 
     try {
       const docRef = await addDoc(collection(db, 'sessions'), sessionData);
-      
+
       // Store active session locally
       this.activeSession = {
         sessionId: docRef.id,
@@ -99,7 +94,7 @@ class SessionManager {
   async completeSession(sessionId: string, actualDuration: number, wasCompleted: boolean = true): Promise<void> {
     try {
       const sessionRef = doc(db, 'sessions', sessionId);
-      
+
       await runTransaction(db, async (transaction) => {
         // Update session
         transaction.update(sessionRef, {
@@ -113,7 +108,7 @@ class SessionManager {
         if (wasCompleted && this.activeSession) {
           const userRef = doc(db, 'users', this.activeSession.userId);
           const focusMinutes = Math.floor(actualDuration / 60);
-          
+
           transaction.update(userRef, {
             totalSessions: increment(1),
             totalFocusMinutes: increment(focusMinutes),
@@ -222,11 +217,11 @@ class SessionManager {
     try {
       const userRef = doc(db, 'users', userId);
       const today = new Date().toISOString().split('T')[0];
-      
+
       await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         const userData = userDoc.data();
-        
+
         if (!userData) return;
 
         const lastActiveDate = userData.lastSessionDate;
@@ -282,12 +277,12 @@ class SessionManager {
       const stored = await AsyncStorage.getItem('offlineQueue');
       if (stored) {
         const queue: SessionData[] = JSON.parse(stored);
-        
+
         console.log(`Processing ${queue.length} queued offline sessions`);
-        
+
         const processedSessions: SessionData[] = [];
         const failedSessions: SessionData[] = [];
-        
+
         for (const session of queue) {
           try {
             // Check for duplicate sessions based on sessionId
@@ -296,25 +291,24 @@ class SessionManager {
               where('sessionId', '==', session.sessionId),
               limit(1)
             );
-            
+
             const existingSnapshot = await getDocs(existingQuery);
-            
+
             if (existingSnapshot.empty) {
               // Session doesn't exist, safe to add
-              const docRef = doc(collection(db, 'sessions'));
-              await setDoc(docRef, session);
+              await addDoc(collection(db, 'sessions'), session);
               processedSessions.push(session);
               console.log(`Synced offline session: ${session.sessionId}`);
             } else {
               // Handle potential conflict - compare timestamps and data quality
               const existingSession = existingSnapshot.docs[0].data() as SessionData;
-              
+
               if (session.endTime && existingSession.endTime) {
                 // Both sessions are complete, merge the better data
                 const shouldUpdate = (session.actualDuration || 0) > (existingSession.actualDuration || 0);
-                
+
                 if (shouldUpdate) {
-                  await updateDoc(existingSnapshot.docs[0].ref, {
+                  await existingSnapshot.docs[0].ref.update({
                     actualDuration: session.actualDuration,
                     completed: session.completed,
                     endTime: session.endTime
@@ -329,7 +323,7 @@ class SessionManager {
             failedSessions.push(session);
           }
         }
-        
+
         // Update the queue with only failed sessions
         if (failedSessions.length > 0) {
           await AsyncStorage.setItem('offlineQueue', JSON.stringify(failedSessions));
@@ -340,7 +334,7 @@ class SessionManager {
           this.offlineQueue = [];
           console.log('All offline sessions processed successfully');
         }
-        
+
         // Update user statistics after successful processing
         if (processedSessions.length > 0 && userId) {
           await this.updateUserSessionStats(userId, processedSessions);
@@ -356,24 +350,24 @@ class SessionManager {
     try {
       const userRef = doc(db, 'users', userId);
       const completedSessions = sessions.filter(s => s.completed);
-      
+
       await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         const userData = userDoc.data() || {};
-        
+
         const totalSessions = (userData.totalSessions || 0) + completedSessions.length;
-        const totalFocusMinutes = (userData.totalFocusMinutes || 0) + 
+        const totalFocusMinutes = (userData.totalFocusMinutes || 0) +
           completedSessions
             .filter(s => s.type === 'work')
             .reduce((sum, s) => sum + Math.floor((s.actualDuration || s.plannedDuration) / 60), 0);
-        
+
         transaction.update(userRef, {
           totalSessions,
           totalFocusMinutes,
           lastUpdated: new Date()
         });
       });
-      
+
       console.log(`Updated user stats for ${completedSessions.length} processed sessions`);
     } catch (error) {
       console.error('Error updating user session stats:', error);

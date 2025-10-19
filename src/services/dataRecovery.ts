@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc } from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dataValidator } from './dataValidator';
@@ -98,7 +98,7 @@ export class DataRecoveryService {
       );
       
       const sessionsSnapshot = await getDocs(sessionsQuery);
-      const sessions = sessionsSnapshot.docs.map(doc => ({
+      const sessions = sessionsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       }));

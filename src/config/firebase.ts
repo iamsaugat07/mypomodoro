@@ -1,36 +1,39 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import { getApp } from '@react-native-firebase/app';
+import { getAuth } from '@react-native-firebase/auth';
+import {
+  getFirestore,
+  Timestamp,
+  serverTimestamp as firestoreServerTimestamp,
+  increment as firestoreIncrement,
+} from '@react-native-firebase/firestore';
+import { getStorage } from '@react-native-firebase/storage';
+import { getAnalytics } from '@react-native-firebase/analytics';
+import { getMessaging } from '@react-native-firebase/messaging';
 
-// Firebase configuration from your project
-const firebaseConfig = {
-  apiKey: "AIzaSyBBSqSrc7Gom_DjwuPbFG-3Xx3uc_xpxH8",
-  authDomain: "pomodoro-f0021.firebaseapp.com", 
-  projectId: "pomodoro-f0021",
-  storageBucket: "pomodoro-f0021.firebasestorage.app",
-  messagingSenderId: "96748369657",
-  appId: "1:96748369657:android:cdaec5ab0971d59a57d428"
-};
+/**
+ * React Native Firebase Configuration (Modular API v23+)
+ *
+ * Configuration is loaded from native files:
+ * - iOS: GoogleService-Info.plist
+ * - Android: google-services.json
+ *
+ * No manual initialization required - RNFirebase auto-initializes
+ */
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app = getApp();
 
-// Initialize Firebase services with React Native persistence
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
-const db = getFirestore(app);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+export const firebaseAnalytics = getAnalytics(app);
+export const firebaseMessaging = getMessaging(app);
 
-// Connect to emulators in development if needed
-if (__DEV__ && Constants.expoConfig?.extra?.useEmulators) {
-  try {
-    connectAuthEmulator(auth, 'http://localhost:9099');
-    connectFirestoreEmulator(db, 'localhost', 8080);
-  } catch (error) {
-    console.log('Emulator connection failed:', error);
-  }
-}
+// For backward compatibility
+export const firebaseAuth = auth;
 
-export { auth, db };
+// Firebase utilities - direct modular imports (no deprecation warnings for these)
+export const FirebaseTimestamp = Timestamp;
+export const serverTimestamp = firestoreServerTimestamp;
+export const increment = firestoreIncrement;
+
+console.log('Firebase initialized successfully with React Native Firebase (Modular API)');

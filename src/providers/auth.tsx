@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
+import { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { AuthContextType, UserProfile } from '../types';
 import { onAuthStateChanged } from '../services/auth';
-import { auth } from '../config/firebase';
 import * as authService from '../services/auth';
+
+// Type alias for Firebase User
+type User = FirebaseAuthTypes.User;
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -24,18 +26,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+    const unsubscribe = onAuthStateChanged(async (firebaseUser: User | null) => {
       try {
         setLoading(true);
-        
+
         if (firebaseUser) {
           let userProfile = await authService.getUserProfile(firebaseUser.uid);
-          
+
           if (!userProfile) {
             await authService.createUserProfile(firebaseUser);
             userProfile = await authService.getUserProfile(firebaseUser.uid);
           }
-          
+
           setUser(userProfile);
         } else {
           setUser(null);

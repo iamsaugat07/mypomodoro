@@ -1,20 +1,18 @@
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy,
-  limit,
-  Timestamp,
-  startAt,
-  endAt,
-  onSnapshot,
+import {
+  collection,
   doc,
-  Unsubscribe
-} from 'firebase/firestore';
+  query,
+  where,
+  orderBy,
+  getDocs,
+  getDoc,
+  onSnapshot
+} from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import premiumGate from './premiumGate';
+
+// Type alias for unsubscribe function
+type Unsubscribe = () => void;
 
 export interface DailyStats {
   date: string;
@@ -177,7 +175,7 @@ class StatisticsManager {
   // Get session history with premium gating
   async getSessionHistory(userId: string, daysBack: number = 7): Promise<any[]> {
     const canAccess = premiumGate.canAccessSessionHistory(daysBack);
-    
+
     if (!canAccess.canAccess) {
       throw new Error(canAccess.upgradeMessage || 'Extended session history requires Premium');
     }
@@ -200,7 +198,7 @@ class StatisticsManager {
       );
 
       const querySnapshot = await getDocs(sessionsQuery);
-      const sessions = querySnapshot.docs.map(doc => ({
+      const sessions = querySnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       }));
@@ -277,24 +275,24 @@ class StatisticsManager {
       );
 
       const querySnapshot = await getDocs(sessionsQuery);
-      const sessions = querySnapshot.docs.map(doc => doc.data());
+      const sessions = querySnapshot.docs.map((doc: any) => doc.data());
 
       // Calculate statistics
-      const workSessions = sessions.filter(s => s.type === 'work' && s.completed).length;
-      const breakSessions = sessions.filter(s => s.type !== 'work' && s.completed).length;
-      const completedSessions = sessions.filter(s => s.completed).length;
-      
+      const workSessions = sessions.filter((s: any) => s.type === 'work' && s.completed).length;
+      const breakSessions = sessions.filter((s: any) => s.type !== 'work' && s.completed).length;
+      const completedSessions = sessions.filter((s: any) => s.completed).length;
+
       const totalFocusMinutes = sessions
-        .filter(s => s.type === 'work' && s.completed)
-        .reduce((total, session) => {
+        .filter((s: any) => s.type === 'work' && s.completed)
+        .reduce((total: any, session: any) => {
           const duration = session.actualDuration || session.plannedDuration || 0;
           return total + Math.floor(duration / 60);
         }, 0);
 
-      const averageSessionLength = completedSessions > 0 
+      const averageSessionLength = completedSessions > 0
         ? sessions
-            .filter(s => s.completed)
-            .reduce((total, session) => {
+            .filter((s: any) => s.completed)
+            .reduce((total: any, session: any) => {
               const duration = session.actualDuration || session.plannedDuration || 0;
               return total + duration;
             }, 0) / completedSessions / 60
@@ -316,14 +314,13 @@ class StatisticsManager {
 
   private async getUserProfile(userId: string): Promise<any> {
     try {
-      const userDoc = await getDocs(
-        query(collection(db, 'users'), where('__name__', '==', userId), limit(1))
-      );
-      
-      if (!userDoc.empty) {
-        return userDoc.docs[0].data();
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        return userDoc.data();
       }
-      
+
       return {};
     } catch (error) {
       console.error('Error getting user profile:', error);
@@ -465,13 +462,13 @@ class StatisticsManager {
   // Real-time statistics subscription
   subscribeToStatistics(userId: string, callback: (stats: UserStatistics) => void): () => void {
     this.statisticsCallbacks.set(userId, callback);
-    
+
     // Subscribe to sessions changes
     const sessionsQuery = query(
       collection(db, 'sessions'),
       where('userId', '==', userId)
     );
-    
+
     const unsubscribeSessions = onSnapshot(sessionsQuery, async () => {
       try {
         const stats = await this.getUserStatistics(userId);
@@ -480,10 +477,10 @@ class StatisticsManager {
         console.error('Error updating real-time statistics:', error);
       }
     });
-    
+
     // Subscribe to user profile changes
-    const userDoc = doc(db, 'users', userId);
-    const unsubscribeUser = onSnapshot(userDoc, async () => {
+    const userDocRef = doc(db, 'users', userId);
+    const unsubscribeUser = onSnapshot(userDocRef, async () => {
       try {
         const stats = await this.getUserStatistics(userId);
         callback(stats);
@@ -491,10 +488,10 @@ class StatisticsManager {
         console.error('Error updating user statistics:', error);
       }
     });
-    
+
     this.listeners.set(`${userId}-sessions`, unsubscribeSessions);
     this.listeners.set(`${userId}-user`, unsubscribeUser);
-    
+
     // Return unsubscribe function
     return () => {
       this.unsubscribeFromStatistics(userId);
