@@ -15,16 +15,19 @@ export default function TimerScreen() {
   const {
     timeLeft,
     sessionType,
-    sessionsCompleted,
+    totalWorkSessions,
+    currentCycle,
     selectedPreset,
     currentPreset,
     cycleSessionsCompleted,
     isSessionActive,
     isPaused,
+    cycleJustCompleted,
     sessionColor,
     timerPresets,
     toggleTimer,
     resetTimer,
+    stopTimer,
     changePreset,
     handleCustomTimer
   } = useTimerLogic();
@@ -37,7 +40,9 @@ export default function TimerScreen() {
       <TimerDisplay
         timeLeft={timeLeft}
         sessionType={sessionType}
-        sessionsCompleted={sessionsCompleted}
+        totalWorkSessions={totalWorkSessions}
+        workSessionDuration={currentPreset.work}
+        currentCycle={currentCycle}
         cycleSessionsCompleted={cycleSessionsCompleted}
         sessionsUntilLongBreak={currentPreset.sessionsUntilLongBreak || 4}
       />
@@ -47,6 +52,7 @@ export default function TimerScreen() {
         isPaused={isPaused}
         onToggleTimer={toggleTimer}
         onResetTimer={resetTimer}
+        onStopTimer={cycleJustCompleted ? stopTimer : undefined}
       />
 
       <PresetSelector

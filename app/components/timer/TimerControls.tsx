@@ -6,13 +6,15 @@ interface TimerControlsProps {
   isPaused: boolean;
   onToggleTimer: () => void;
   onResetTimer: () => void;
+  onStopTimer?: () => void; // Optional stop button (shown after cycle completion)
 }
 
 const TimerControls = ({
   isSessionActive,
   isPaused,
   onToggleTimer,
-  onResetTimer
+  onResetTimer,
+  onStopTimer
 }: TimerControlsProps) => {
   const getButtonText = (): string => {
     if (isSessionActive && !isPaused) return 'PAUSE';
@@ -22,21 +24,30 @@ const TimerControls = ({
 
   return (
     <View style={styles.controls}>
-      <TouchableOpacity 
-        style={[styles.button, styles.primaryButton]} 
+      <TouchableOpacity
+        style={[styles.button, styles.primaryButton]}
         onPress={onToggleTimer}
       >
         <Text style={styles.buttonText}>
           {getButtonText()}
         </Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.button, styles.secondaryButton]} 
-        onPress={onResetTimer}
-      >
-        <Text style={styles.secondaryButtonText}>RESET</Text>
-      </TouchableOpacity>
+
+      {onStopTimer ? (
+        <TouchableOpacity
+          style={[styles.button, styles.stopButton]}
+          onPress={onStopTimer}
+        >
+          <Text style={styles.secondaryButtonText}>STOP</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={onResetTimer}
+        >
+          <Text style={styles.secondaryButtonText}>RESET</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -61,6 +72,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: 'white',
+  },
+  stopButton: {
+    backgroundColor: 'rgba(255, 0, 0, 0.7)',
   },
   buttonText: {
     fontSize: 18,

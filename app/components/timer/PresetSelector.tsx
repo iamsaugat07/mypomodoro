@@ -47,7 +47,13 @@ const PresetSelector = ({
               styles.presetTimeText,
               selectedPreset === preset && styles.activePresetButtonText
             ]}>
-              {presets[preset].work}min
+              {presets[preset].work}m work
+            </Text>
+            <Text style={[
+              styles.presetCycleText,
+              selectedPreset === preset && styles.activePresetButtonText
+            ]}>
+              {presets[preset].sessionsUntilLongBreak || 4} sessions
             </Text>
           </TouchableOpacity>
         ))}
@@ -83,11 +89,11 @@ const styles = StyleSheet.create({
   },
   presetButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 10,
     alignItems: 'center',
-    minWidth: 70,
+    minWidth: 80,
   },
   activePresetButton: {
     backgroundColor: 'white',
@@ -99,9 +105,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   presetTimeText: {
-    fontSize: 10,
+    fontSize: 11,
     color: 'white',
     opacity: 0.8,
+    marginBottom: 2,
+  },
+  presetCycleText: {
+    fontSize: 9,
+    color: 'white',
+    opacity: 0.7,
   },
   activePresetButtonText: {
     color: '#333',
