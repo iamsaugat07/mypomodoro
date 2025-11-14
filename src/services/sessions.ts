@@ -1,15 +1,4 @@
-import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs
-} from '@react-native-firebase/firestore';
-import { db, serverTimestamp, FirebaseTimestamp } from '../config/firebase';
+import { db, serverTimestamp, FirebaseTimestamp, collection, addDoc, doc, updateDoc, query, where, orderBy, limit, getDocs } from '../config/firebase';
 import { PomodoroSession } from '../types';
 
 export const createSession = async (
@@ -28,7 +17,8 @@ export const createSession = async (
       date: new Date().toISOString().split('T')[0] // YYYY-MM-DD format
     };
 
-    const docRef = await addDoc(collection(db, 'sessions'), sessionData);
+    const sessionsRef = collection(db, 'sessions');
+    const docRef = await addDoc(sessionsRef, sessionData);
     return docRef.id;
   } catch (error) {
     console.error('Error creating session:', error);
@@ -60,8 +50,9 @@ export const getUserSessions = async (
   limitCount: number = 50
 ): Promise<PomodoroSession[]> => {
   try {
+    const sessionsRef = collection(db, 'sessions');
     const q = query(
-      collection(db, 'sessions'),
+      sessionsRef,
       where('userId', '==', userId),
       orderBy('startedAt', 'desc'),
       limit(limitCount)

@@ -1,5 +1,4 @@
-import { collection, query, where, getDocs, writeBatch, doc } from '@react-native-firebase/firestore';
-import { db } from '../config/firebase';
+import { db, collection, query, where, getDocs, doc, getDoc, setDoc, writeBatch } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dataValidator } from './dataValidator';
 import { SessionData } from './sessionManager';
@@ -24,28 +23,26 @@ export class DataRecoveryService {
       removedRecords: 0,
       errors: []
     };
-    
+
     try {
       // Get all user sessions
-      const sessionsQuery = query(
-        collection(db, 'sessions'),
-        where('userId', '==', userId)
-      );
-      
+      const sessionsCol = collection(db, 'sessions');
+      const sessionsQuery = query(sessionsCol, where('userId', '==', userId));
+
       const snapshot = await getDocs(sessionsQuery);
       report.totalRecords = snapshot.size;
-      
+
       if (snapshot.empty) {
         return report;
       }
-      
+
       const batch = writeBatch(db);
       let batchOperations = 0;
-      
+
       for (const docSnapshot of snapshot.docs) {
         const sessionData = docSnapshot.data() as SessionData;
         const validation = dataValidator.validateSessionData(sessionData);
-        
+
         if (validation.isValid) {
           report.validRecords++;
         } else if (validation.fixedData) {
@@ -53,36 +50,36 @@ export class DataRecoveryService {
           batch.update(docSnapshot.ref, validation.fixedData);
           report.fixedRecords++;
           batchOperations++;
-          
+
           report.errors.push(`Fixed session ${sessionData.sessionId}: ${validation.errors.join(', ')}`);
         } else {
           // Data is too corrupted, remove it
           batch.delete(docSnapshot.ref);
           report.removedRecords++;
           batchOperations++;
-          
+
           report.errors.push(`Removed corrupted session ${sessionData.sessionId}`);
         }
-        
+
         // Firestore batch limit is 500 operations
         if (batchOperations >= 450) {
           await batch.commit();
           batchOperations = 0;
         }
       }
-      
+
       // Commit remaining operations
       if (batchOperations > 0) {
         await batch.commit();
       }
-      
+
       console.log(`Session validation complete: ${report.fixedRecords} fixed, ${report.removedRecords} removed`);
-      
+
     } catch (error) {
       console.error('Error validating user sessions:', error);
       report.errors.push(`Validation failed: ${error}`);
     }
-    
+
     return report;
   }
   
@@ -90,37 +87,31 @@ export class DataRecoveryService {
   async backupUserData(userId: string): Promise<boolean> {
     try {
       const timestamp = new Date().toISOString();
-      
+
       // Backup sessions
-      const sessionsQuery = query(
-        collection(db, 'sessions'),
-        where('userId', '==', userId)
-      );
-      
+      const sessionsCol = collection(db, 'sessions');
+      const sessionsQuery = query(sessionsCol, where('userId', '==', userId));
+
       const sessionsSnapshot = await getDocs(sessionsQuery);
       const sessions = sessionsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       }));
-      
+
       // Backup user profile
-      const userQuery = query(
-        collection(db, 'users'),
-        where('__name__', '==', userId)
-      );
-      
-      const userSnapshot = await getDocs(userQuery);
-      const userProfile = userSnapshot.empty ? null : userSnapshot.docs[0].data();
-      
+      const userRef = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userRef);
+      const userProfile = userSnapshot.exists() ? userSnapshot.data() : null;
+
       const backupData = {
         timestamp,
         userId,
         sessions,
         userProfile
       };
-      
+
       await AsyncStorage.setItem(`backup_${userId}_${timestamp}`, JSON.stringify(backupData));
-      
+
       console.log(`User data backed up: ${sessions.length} sessions`);
       return true;
     } catch (error) {
@@ -134,35 +125,35 @@ export class DataRecoveryService {
     try {
       const backupKey = `backup_${userId}_${backupTimestamp}`;
       const backupData = await AsyncStorage.getItem(backupKey);
-      
+
       if (!backupData) {
         console.error('Backup not found');
         return false;
       }
-      
+
       const backup = JSON.parse(backupData);
-      
+
       // Restore sessions
       if (backup.sessions && backup.sessions.length > 0) {
         const batch = writeBatch(db);
-        
+
         for (const session of backup.sessions) {
           const { id, ...sessionData } = session;
           const docRef = doc(db, 'sessions', id);
           batch.set(docRef, sessionData);
         }
-        
+
         await batch.commit();
         console.log(`Restored ${backup.sessions.length} sessions`);
       }
-      
+
       // Restore user profile
       if (backup.userProfile) {
         const userRef = doc(db, 'users', userId);
-        await writeBatch(db).set(userRef, backup.userProfile).commit();
+        await setDoc(userRef, backup.userProfile);
         console.log('User profile restored');
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error restoring user data:', error);

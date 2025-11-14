@@ -1,7 +1,23 @@
-import auth, { FirebaseAuthTypes, onAuthStateChanged as authStateListener } from '@react-native-firebase/auth';
-import { doc, getDoc, setDoc } from '@react-native-firebase/firestore';
+import {
+  FirebaseAuthTypes,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  signOut as firebaseSignOut,
+  updateProfile,
+  onAuthStateChanged as firebaseOnAuthStateChanged
+} from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { firebaseAuth, db, serverTimestamp, FirebaseTimestamp } from '../config/firebase';
+import {
+  firebaseAuth,
+  GoogleAuthProvider,
+  db,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  Timestamp
+} from '../config/firebase';
 import { UserProfile, UserSettings } from '../types';
 
 // Type alias for Firebase User
@@ -84,8 +100,8 @@ export const signUpWithEmail = async (
   displayName: string
 ): Promise<User> => {
   try {
-    const { user } = await firebaseAuth.createUserWithEmailAndPassword(email, password);
-    await user.updateProfile({ displayName });
+    const { user } = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+    await updateProfile(user, { displayName });
     await createUserProfile(user, { displayName });
     return user;
   } catch (error: any) {
@@ -99,7 +115,7 @@ export const signInWithEmail = async (
   password: string
 ): Promise<User> => {
   try {
-    const { user } = await firebaseAuth.signInWithEmailAndPassword(email, password);
+    const { user } = await signInWithEmailAndPassword(firebaseAuth, email, password);
     await createUserProfile(user);
     return user;
   } catch (error: any) {
@@ -127,10 +143,10 @@ export const signInWithGoogle = async (): Promise<User> => {
 
     if (response.type === 'success' && response.data?.idToken) {
       // Create Firebase credential from Google ID token
-      const googleCredential = auth.GoogleAuthProvider.credential(response.data.idToken);
+      const googleCredential = GoogleAuthProvider.credential(response.data.idToken);
 
       // Sign in to Firebase with the Google credential
-      const { user } = await firebaseAuth.signInWithCredential(googleCredential);
+      const { user } = await signInWithCredential(firebaseAuth, googleCredential);
 
       // Create or update user profile
       await createUserProfile(user);
@@ -161,7 +177,7 @@ export const signInWithGoogle = async (): Promise<User> => {
 export const signOut = async (): Promise<void> => {
   try {
     // Sign out from Firebase
-    await firebaseAuth.signOut();
+    await firebaseSignOut(firebaseAuth);
 
     // Sign out from Google
     try {
@@ -188,8 +204,8 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
       return {
         uid,
         ...data,
-        createdAt: data?.createdAt || FirebaseTimestamp.now(),
-        lastActiveAt: data?.lastActiveAt || FirebaseTimestamp.now(),
+        createdAt: data?.createdAt || Timestamp.now(),
+        lastActiveAt: data?.lastActiveAt || Timestamp.now(),
       } as UserProfile;
     }
 
@@ -223,7 +239,7 @@ export const updateUserSubscription = async (
   uid: string,
   subscriptionData: {
     subscriptionStatus: 'free' | 'premium' | 'expired';
-    subscriptionExpiresAt?: typeof FirebaseTimestamp;
+    subscriptionExpiresAt?: typeof Timestamp;
     subscriptionProductId?: string;
     revenueCatCustomerId?: string;
   }
@@ -241,7 +257,7 @@ export const updateUserSubscription = async (
   }
 };
 
-// Export the auth state change listener for the provider (modular API)
+// Export the auth state change listener for the provider
 export const onAuthStateChanged = (callback: (user: User | null) => void) => {
-  return authStateListener(firebaseAuth, callback);
+  return firebaseOnAuthStateChanged(firebaseAuth, callback);
 };

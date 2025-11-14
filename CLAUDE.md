@@ -119,6 +119,7 @@ The app uses a hook-based architecture where services are wrapped in React hooks
 - **Firestore**: Real-time session tracking and statistics
 - **Offline Support**: Firestore offline persistence with custom queuing
 - **Security Rules**: Configured for user-scoped data access
+- **API Version**: Uses React Native Firebase **Modular API (v22+)** - NOT the deprecated namespaced API
 
 ### Premium Features
 The app includes premium functionality gated through `premiumGate.ts` and managed via React Native Purchases. Premium features are controlled throughout the UI with `PremiumBadge` and `FeatureLockedCard` components.
@@ -134,6 +135,168 @@ Google OAuth is configured for both platforms with proper URL schemes. Authentic
 - **Components**: PascalCase (`CustomTimerModal.tsx`)
 - **Hooks**: Prefix `use` (`useSessionManager.ts`)
 - **Constants**: UPPER_SNAKE_CASE (`const TIMER_PRESETS`)
+
+## 🔥 Firebase Modular API Standards
+
+**CRITICAL**: This codebase uses React Native Firebase **Modular API (v22+)**. The old namespaced API is deprecated and will be removed.
+
+### Firebase Initialization Pattern
+```typescript
+// src/config/firebase.ts - Correct modular pattern
+import { getApp } from '@react-native-firebase/app';
+import { getAuth } from '@react-native-firebase/auth';
+import { getFirestore } from '@react-native-firebase/firestore';
+
+export const app = getApp();
+export const firebaseAuth = getAuth(app);
+export const db = getFirestore(app);
+```
+
+### Firestore Operations - Modular API
+
+**✅ CORRECT - Use Modular API:**
+```typescript
+import { db, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, getDocs, onSnapshot } from '../config/firebase';
+
+// Create/update document
+const userRef = doc(db, 'users', userId);
+await setDoc(userRef, data, { merge: true });
+
+// Read document
+const docSnap = await getDoc(userRef);
+if (docSnap.exists()) {
+  const data = docSnap.data();
+}
+
+// Update document
+await updateDoc(userRef, { field: 'value' });
+
+// Delete document
+await deleteDoc(userRef);
+
+// Query collection
+const sessionsRef = collection(db, 'sessions');
+const q = query(
+  sessionsRef,
+  where('userId', '==', userId),
+  orderBy('date', 'desc'),
+  limit(50)
+);
+const querySnapshot = await getDocs(q);
+
+// Real-time listener
+const unsubscribe = onSnapshot(q, (snapshot) => {
+  snapshot.forEach((doc) => {
+    console.log(doc.id, doc.data());
+  });
+});
+```
+
+**❌ WRONG - Deprecated Namespaced API:**
+```typescript
+// DON'T USE THESE - They will be removed in v22+
+const ref = db.collection('users').doc(userId);  // ❌ DEPRECATED
+await ref.get();                                  // ❌ DEPRECATED
+await ref.set(data);                             // ❌ DEPRECATED
+await ref.update(data);                          // ❌ DEPRECATED
+const query = db.collection('sessions')          // ❌ DEPRECATED
+  .where('userId', '==', userId)
+  .orderBy('date', 'desc');
+```
+
+### Authentication - Modular API
+
+**✅ CORRECT:**
+```typescript
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  signOut,
+  onAuthStateChanged
+} from '@react-native-firebase/auth';
+import { firebaseAuth, GoogleAuthProvider } from '../config/firebase';
+
+// Create user
+await createUserWithEmailAndPassword(firebaseAuth, email, password);
+
+// Sign in
+await signInWithEmailAndPassword(firebaseAuth, email, password);
+
+// Google sign in
+const credential = GoogleAuthProvider.credential(idToken);
+await signInWithCredential(firebaseAuth, credential);
+
+// Auth listener
+const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+  if (user) {
+    console.log('Signed in:', user.uid);
+  }
+});
+```
+
+**❌ WRONG:**
+```typescript
+// DON'T USE - Deprecated
+await firebaseAuth.createUserWithEmailAndPassword(email, password);  // ❌
+await firebaseAuth.signInWithEmailAndPassword(email, password);      // ❌
+const credential = auth.GoogleAuthProvider.credential(idToken);      // ❌
+firebaseAuth.onAuthStateChanged((user) => {});                      // ❌
+```
+
+### Field Values - Modular API
+
+**✅ CORRECT:**
+```typescript
+import { serverTimestamp, increment, arrayUnion, arrayRemove } from '../config/firebase';
+
+await setDoc(userRef, {
+  createdAt: serverTimestamp(),
+  totalSessions: increment(1),
+  tags: arrayUnion('new-tag'),
+  oldTags: arrayRemove('old-tag')
+});
+```
+
+**❌ WRONG:**
+```typescript
+// DON'T USE - Deprecated
+import { db } from '../config/firebase';
+
+await userRef.set({
+  createdAt: firestore.FieldValue.serverTimestamp(),  // ❌
+  totalSessions: firestore.FieldValue.increment(1)     // ❌
+});
+```
+
+### Transactions & Batches - Modular API
+
+**✅ CORRECT:**
+```typescript
+import { runTransaction, writeBatch } from '../config/firebase';
+
+// Transaction
+await runTransaction(db, async (transaction) => {
+  const userDoc = await transaction.get(userRef);
+  transaction.update(userRef, { count: userDoc.data().count + 1 });
+});
+
+// Batch writes
+const batch = writeBatch(db);
+batch.set(doc1Ref, data1);
+batch.update(doc2Ref, data2);
+batch.delete(doc3Ref);
+await batch.commit();
+```
+
+**❌ WRONG:**
+```typescript
+// DON'T USE - Deprecated
+await db.runTransaction(async (transaction) => {     // ❌
+  const userDoc = await transaction.get(userRef);
+  transaction.update(userRef, { count: userDoc.data().count + 1 });
+});
+```
 
 ## 🔧 Service Layer Standards
 
@@ -491,6 +654,9 @@ All Firebase operations are queued locally when offline and synced when connecti
 - [ ] Firebase security rules updated if schema changed
 - [ ] Components use plain function typing (no React.FC)
 - [ ] Children prop explicitly typed when needed
+- [ ] **Firebase code uses modular API (v22+), NOT deprecated namespaced API**
+- [ ] No `db.collection().doc()` patterns (use `doc(db, collection, id)`)
+- [ ] No `ref.get()/.set()/.update()` (use `getDoc()/setDoc()/updateDoc()`)
 
 ### Architecture Review
 - [ ] Follows service → hook → component pattern

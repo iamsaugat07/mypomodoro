@@ -1,5 +1,4 @@
-import { doc, getDoc, updateDoc } from '@react-native-firebase/firestore';
-import { db } from '../config/firebase';
+import { db, doc, getDoc, updateDoc } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserSettings, TimerPreset } from '../types';
 import premiumGate from './premiumGate';

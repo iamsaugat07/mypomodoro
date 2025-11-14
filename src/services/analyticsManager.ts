@@ -1,6 +1,5 @@
-import { collection, addDoc } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { firebaseAnalytics, db, serverTimestamp } from '../config/firebase';
+import { firebaseAnalytics, db, serverTimestamp, collection, addDoc } from '../config/firebase';
 
 export interface PerformanceMetric {
   eventName: string;
@@ -251,7 +250,8 @@ export class AnalyticsManager {
       platform: 'react-native'
     }));
 
-    await addDoc(collection(db, 'analytics'), {
+    const analyticsRef = collection(db, 'analytics');
+    await addDoc(analyticsRef, {
       events: batch,
       timestamp: serverTimestamp()
     });

@@ -30,13 +30,6 @@
               "pomodoroapp",
               "com.pomodorotimerbysaugat.app"
             ]
-          },
-          {
-            "CFBundleURLName": "pomodoroapp",
-            "CFBundleURLSchemes": [
-              "pomodoroapp",
-              "com.pomodorotimerbysaugat.app"
-            ]
           }
         ],
         "ITSAppUsesNonExemptEncryption": false

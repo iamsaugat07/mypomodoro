@@ -1,15 +1,4 @@
-import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  runTransaction,
-  query,
-  where,
-  limit,
-  getDocs,
-} from '@react-native-firebase/firestore';
-import { db, serverTimestamp, increment, FirebaseTimestamp } from '../config/firebase';
+import { db, serverTimestamp, increment, FirebaseTimestamp, collection, addDoc, doc, updateDoc, query, where, limit, getDocs, runTransaction } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SessionData {
@@ -67,7 +56,8 @@ class SessionManager {
     };
 
     try {
-      const docRef = await addDoc(collection(db, 'sessions'), sessionData);
+      const sessionsRef = collection(db, 'sessions');
+      const docRef = await addDoc(sessionsRef, sessionData);
 
       // Store active session locally
       this.activeSession = {
@@ -97,7 +87,7 @@ class SessionManager {
 
       await runTransaction(db, async (transaction) => {
         // Update session
-        transaction.update(sessionRef, {
+        await updateDoc(sessionRef, {
           actualDuration,
           endTime: serverTimestamp(),
           completed: wasCompleted,
@@ -109,7 +99,7 @@ class SessionManager {
           const userRef = doc(db, 'users', this.activeSession.userId);
           const focusMinutes = Math.floor(actualDuration / 60);
 
-          transaction.update(userRef, {
+          await updateDoc(userRef, {
             totalSessions: increment(1),
             totalFocusMinutes: increment(focusMinutes),
             lastActiveAt: serverTimestamp()
@@ -286,8 +276,9 @@ class SessionManager {
         for (const session of queue) {
           try {
             // Check for duplicate sessions based on sessionId
+            const sessionsRef = collection(db, 'sessions');
             const existingQuery = query(
-              collection(db, 'sessions'),
+              sessionsRef,
               where('sessionId', '==', session.sessionId),
               limit(1)
             );
@@ -296,7 +287,7 @@ class SessionManager {
 
             if (existingSnapshot.empty) {
               // Session doesn't exist, safe to add
-              await addDoc(collection(db, 'sessions'), session);
+              await addDoc(sessionsRef, session);
               processedSessions.push(session);
               console.log(`Synced offline session: ${session.sessionId}`);
             } else {
@@ -308,7 +299,8 @@ class SessionManager {
                 const shouldUpdate = (session.actualDuration || 0) > (existingSession.actualDuration || 0);
 
                 if (shouldUpdate) {
-                  await existingSnapshot.docs[0].ref.update({
+                  const sessionRef = doc(db, 'sessions', existingSnapshot.docs[0].id);
+                  await updateDoc(sessionRef, {
                     actualDuration: session.actualDuration,
                     completed: session.completed,
                     endTime: session.endTime

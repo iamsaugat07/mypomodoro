@@ -1,14 +1,4 @@
-import {
-  collection,
-  doc,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  getDoc,
-  onSnapshot
-} from '@react-native-firebase/firestore';
-import { db } from '../config/firebase';
+import { db, collection, query, where, getDocs, doc, getDoc, onSnapshot } from '../config/firebase';
 import premiumGate from './premiumGate';
 
 // Type alias for unsubscribe function
@@ -189,12 +179,12 @@ class StatisticsManager {
       const startDate = new Date(today);
       startDate.setDate(today.getDate() - daysBack);
 
+      const sessionsCol = collection(db, 'sessions');
       const sessionsQuery = query(
-        collection(db, 'sessions'),
+        sessionsCol,
         where('userId', '==', userId),
         where('date', '>=', startDate.toISOString().split('T')[0]),
-        where('date', '<=', today.toISOString().split('T')[0]),
-        orderBy('startTime', 'desc')
+        where('date', '<=', today.toISOString().split('T')[0])
       );
 
       const querySnapshot = await getDocs(sessionsQuery);
@@ -268,8 +258,9 @@ class StatisticsManager {
   private async getDailyStats(userId: string, date: string): Promise<DailyStats> {
     try {
       // Query sessions for the specific date
+      const sessionsCol = collection(db, 'sessions');
       const sessionsQuery = query(
-        collection(db, 'sessions'),
+        sessionsCol,
         where('userId', '==', userId),
         where('date', '==', date)
       );
@@ -464,10 +455,8 @@ class StatisticsManager {
     this.statisticsCallbacks.set(userId, callback);
 
     // Subscribe to sessions changes
-    const sessionsQuery = query(
-      collection(db, 'sessions'),
-      where('userId', '==', userId)
-    );
+    const sessionsCol = collection(db, 'sessions');
+    const sessionsQuery = query(sessionsCol, where('userId', '==', userId));
 
     const unsubscribeSessions = onSnapshot(sessionsQuery, async () => {
       try {
