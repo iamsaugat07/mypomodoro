@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "../src/providers/auth";
 import { SubscriptionProvider } from "../src/providers/subscription";
+import { cleanupSounds, initializeSounds } from "../src/services/soundManager";
 
 function RootLayoutNav() {
   const { user, loading } = useAuth();
@@ -23,6 +24,16 @@ function RootLayoutNav() {
       router.replace("/(tabs)/");
     }
   }, [user, loading, segments]);
+
+  useEffect(() => {
+    initializeSounds().catch((error) => {
+      console.error("Sound manager initialization failed:", error);
+    });
+
+    return () => {
+      cleanupSounds();
+    };
+  }, []);
 
   if (loading) {
     return (

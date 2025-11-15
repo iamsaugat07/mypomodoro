@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
-import { SessionType, TimerPreset } from '../types';
-import { useSessionManager } from './useSessionManager';
-import { useSettings } from './useSettings';
+import { useState, useEffect, useCallback } from "react";
+import { Alert } from "react-native";
+import { SessionType, TimerPreset } from "../types";
+import { useSessionManager } from "./useSessionManager";
+import { useSettings } from "./useSettings";
+import { playBreakCompleteSound, playStartSound, playWorkCompleteSound } from "../services/soundManager";
 
 const TIMER_PRESETS: Record<string, TimerPreset> = {
   pomodoro: { work: 25, break: 5, longBreak: 15, sessionsUntilLongBreak: 4 },
   shortWork: { work: 15, break: 5, longBreak: 15, sessionsUntilLongBreak: 4 },
-  longWork: { work: 50, break: 10, longBreak: 20, sessionsUntilLongBreak: 4 }
+  longWork: { work: 50, break: 10, longBreak: 20, sessionsUntilLongBreak: 4 },
 };
 
 export const useTimerLogic = () => {
@@ -21,21 +22,24 @@ export const useTimerLogic = () => {
     cancelSession,
     pauseSession,
     resumeSession,
-    isPaused
+    isPaused,
   } = useSessionManager();
 
   const [timeLeft, setTimeLeft] = useState<number>(25 * 60);
-  const [sessionType, setSessionType] = useState<SessionType>('work');
+  const [sessionType, setSessionType] = useState<SessionType>("work");
   const [totalWorkSessions, setTotalWorkSessions] = useState<number>(0);
   const [currentCycle, setCurrentCycle] = useState<number>(1);
-  const [selectedPreset, setSelectedPreset] = useState<string>('pomodoro');
-  const [currentPreset, setCurrentPreset] = useState<TimerPreset>(TIMER_PRESETS.pomodoro);
-  const [cycleSessionsCompleted, setCycleSessionsCompleted] = useState<number>(0);
+  const [selectedPreset, setSelectedPreset] = useState<string>("pomodoro");
+  const [currentPreset, setCurrentPreset] = useState<TimerPreset>(
+    TIMER_PRESETS.pomodoro
+  );
+  const [cycleSessionsCompleted, setCycleSessionsCompleted] =
+    useState<number>(0);
   const [cycleJustCompleted, setCycleJustCompleted] = useState<boolean>(false);
 
   // Debug: Log timeLeft changes
   useEffect(() => {
-    console.log('timeLeft changed to:', timeLeft, 'seconds');
+    console.log("timeLeft changed to:", timeLeft, "seconds");
   }, [timeLeft]);
 
   // Update time left based on elapsed time from session manager
@@ -44,7 +48,7 @@ export const useTimerLogic = () => {
       const plannedDuration = activeSession.plannedDuration;
       const remaining = plannedDuration - Math.floor(elapsedTime / 1000);
       setTimeLeft(Math.max(0, remaining));
-      
+
       if (remaining <= 0) {
         handleTimerComplete();
       }
@@ -53,13 +57,24 @@ export const useTimerLogic = () => {
 
   // Load settings defaults only on initial load, not when presets change
   useEffect(() => {
-    console.log('Settings effect triggered:', { settings: !!settings, selectedPreset, sessionType, isSessionActive });
-    if (settings && !isSessionActive && selectedPreset === 'pomodoro' && sessionType === 'work' && timeLeft === 25 * 60) {
+    console.log("Settings effect triggered:", {
+      settings: !!settings,
+      selectedPreset,
+      sessionType,
+      isSessionActive,
+    });
+    if (
+      settings &&
+      !isSessionActive &&
+      selectedPreset === "pomodoro" &&
+      sessionType === "work" &&
+      timeLeft === 25 * 60
+    ) {
       // Only apply settings defaults on initial load with default values
-      console.log('Applying initial settings defaults');
+      console.log("Applying initial settings defaults");
       const presetData = getPresetData(selectedPreset);
       const duration = settings.defaultWorkDuration || presetData.work;
-      console.log('Settings effect setting timeLeft to:', duration * 60);
+      console.log("Settings effect setting timeLeft to:", duration * 60);
       setTimeLeft(duration * 60);
     }
   }, [settings, selectedPreset, sessionType, isSessionActive, timeLeft]);
@@ -74,10 +89,14 @@ export const useTimerLogic = () => {
 
   const getSessionColor = useCallback((): string => {
     switch (sessionType) {
-      case 'work': return '#e74c3c';
-      case 'break': return '#2ecc71';
-      case 'longBreak': return '#3498db';
-      default: return '#e74c3c';
+      case "work":
+        return "#e74c3c";
+      case "break":
+        return "#2ecc71";
+      case "longBreak":
+        return "#3498db";
+      default:
+        return "#e74c3c";
     }
   }, [sessionType]);
 
@@ -85,78 +104,104 @@ export const useTimerLogic = () => {
     try {
       await completeSession(true);
     } catch (error) {
-      console.error('Error completing session:', error);
+      console.error("Error completing session:", error);
     }
 
-    if (sessionType === 'work') {
+    if (sessionType === "work") {
       const newCycleSessionsCompleted = cycleSessionsCompleted + 1;
       const newTotalWorkSessions = totalWorkSessions + 1;
       setCycleSessionsCompleted(newCycleSessionsCompleted);
       setTotalWorkSessions(newTotalWorkSessions);
 
       const sessionsUntilLongBreak = currentPreset.sessionsUntilLongBreak || 4;
-      console.log(`Session completed: ${newCycleSessionsCompleted}/${sessionsUntilLongBreak}, checking for long break: ${newCycleSessionsCompleted % sessionsUntilLongBreak === 0}`);
+      console.log(
+        `Session completed: ${newCycleSessionsCompleted}/${sessionsUntilLongBreak}, checking for long break: ${
+          newCycleSessionsCompleted % sessionsUntilLongBreak === 0
+        }`
+      );
 
       if (newCycleSessionsCompleted % sessionsUntilLongBreak === 0) {
-        console.log(`Triggering long break after ${newCycleSessionsCompleted} sessions`);
-        setSessionType('longBreak');
+        console.log(
+          `Triggering long break after ${newCycleSessionsCompleted} sessions`
+        );
+        await playWorkCompleteSound();
+        setSessionType("longBreak");
         setTimeLeft(currentPreset.longBreak * 60);
         Alert.alert(
-          'Work Complete!',
+          "Work Complete!",
           `Time for a long break! You've completed cycle ${currentCycle}.`,
-          [{ text: 'Start Break', onPress: () => startNextSession('longBreak') }]
+          [
+            {
+              text: "Start Break",
+              onPress: () => startNextSession("longBreak"),
+            },
+          ]
         );
       } else {
-        setSessionType('break');
+        await playWorkCompleteSound();
+        setSessionType("break");
         setTimeLeft(currentPreset.break * 60);
-        Alert.alert(
-          'Work Complete!',
-          'Time for a short break!',
-          [{ text: 'Start Break', onPress: () => startNextSession('break') }]
-        );
+        Alert.alert("Work Complete!", "Time for a short break!", [
+          { text: "Start Break", onPress: () => startNextSession("break") },
+        ]);
       }
     } else {
       // Break completed - check if it was a long break to start new cycle
-      if (sessionType === 'longBreak') {
+      if (sessionType === "longBreak") {
+        await playBreakCompleteSound();
         setCycleSessionsCompleted(0); // Reset cycle counter after long break
         setCurrentCycle(currentCycle + 1); // Increment cycle number
         console.log(`Long break completed, starting cycle ${currentCycle + 1}`);
 
         // After long break, just set up the work session without auto-starting
-        setSessionType('work');
+        setSessionType("work");
         setTimeLeft(currentPreset.work * 60);
         setCycleJustCompleted(true); // Flag to show Start/Stop buttons
 
         Alert.alert(
-          'Cycle Complete!',
-          `You've completed cycle ${currentCycle}! Ready to start cycle ${currentCycle + 1}?`
+          "Cycle Complete!",
+          `You've completed cycle ${currentCycle}! Ready to start cycle ${
+            currentCycle + 1
+          }?`
         );
       } else {
         // Short break completed - auto-start work session
-        setSessionType('work');
+        await playBreakCompleteSound();
+        setSessionType("work");
         setTimeLeft(currentPreset.work * 60);
 
-        Alert.alert(
-          'Break Complete!',
-          'Time to get back to work!',
-          [{ text: 'Start Work', onPress: () => startNextSession('work') }]
-        );
+        Alert.alert("Break Complete!", "Time to get back to work!", [
+          { text: "Start Work", onPress: () => startNextSession("work") },
+        ]);
       }
     }
-  }, [sessionType, cycleSessionsCompleted, totalWorkSessions, currentCycle, currentPreset, completeSession]);
+  }, [
+    sessionType,
+    cycleSessionsCompleted,
+    totalWorkSessions,
+    currentCycle,
+    currentPreset,
+    completeSession,
+  ]);
 
-  const startNextSession = useCallback(async (type: SessionType): Promise<void> => {
-    try {
-      const duration = type === 'work' ? currentPreset.work * 60 :
-                      type === 'break' ? currentPreset.break * 60 : 
-                      currentPreset.longBreak * 60;
-      
-      await startSession(type, duration);
-    } catch (error) {
-      console.error('Error starting next session:', error);
-      Alert.alert('Error', 'Failed to start session. Please try again.');
-    }
-  }, [currentPreset, startSession]);
+  const startNextSession = useCallback(
+    async (type: SessionType): Promise<void> => {
+      try {
+        const duration =
+          type === "work"
+            ? currentPreset.work * 60
+            : type === "break"
+            ? currentPreset.break * 60
+            : currentPreset.longBreak * 60;
+
+        await startSession(type, duration);
+      } catch (error) {
+        console.error("Error starting next session:", error);
+        Alert.alert("Error", "Failed to start session. Please try again.");
+      }
+    },
+    [currentPreset, startSession]
+  );
 
   const toggleTimer = useCallback(async (): Promise<void> => {
     try {
@@ -171,17 +216,30 @@ export const useTimerLogic = () => {
         }
 
         const duration = timeLeft;
+        await playStartSound();
         await startSession(
-          sessionType === 'work' ? 'work' :
-          sessionType === 'break' ? 'break' : 'longBreak',
+          sessionType === "work"
+            ? "work"
+            : sessionType === "break"
+            ? "break"
+            : "longBreak",
           duration
         );
       }
     } catch (error) {
-      console.error('Error toggling timer:', error);
-      Alert.alert('Error', 'Failed to start session. Please try again.');
+      console.error("Error toggling timer:", error);
+      Alert.alert("Error", "Failed to start session. Please try again.");
     }
-  }, [isSessionActive, isPaused, pauseSession, resumeSession, startSession, timeLeft, sessionType, cycleJustCompleted]);
+  }, [
+    isSessionActive,
+    isPaused,
+    pauseSession,
+    resumeSession,
+    startSession,
+    timeLeft,
+    sessionType,
+    cycleJustCompleted,
+  ]);
 
   const resetTimer = useCallback(async (): Promise<void> => {
     try {
@@ -196,88 +254,108 @@ export const useTimerLogic = () => {
       setCycleJustCompleted(false);
 
       // Reset to work session
-      setSessionType('work');
+      setSessionType("work");
 
       // Use the currently selected preset's work duration (don't revert to settings default)
       const duration = currentPreset.work;
 
       setTimeLeft(duration * 60);
     } catch (error) {
-      console.error('Error resetting timer:', error);
+      console.error("Error resetting timer:", error);
     }
   }, [isSessionActive, cancelSession, currentPreset]);
 
   const stopTimer = useCallback((): void => {
     // Clear the cycle completion flag and reset to initial state
     setCycleJustCompleted(false);
-    setSessionType('work');
+    setSessionType("work");
     setTimeLeft(currentPreset.work * 60);
   }, [currentPreset]);
 
-  const changePreset = useCallback(async (preset: string): Promise<void> => {
-    console.log('changePreset called with:', preset);
+  const changePreset = useCallback(
+    async (preset: string): Promise<void> => {
+      console.log("changePreset called with:", preset);
 
-    if (isSessionActive) {
-      await cancelSession();
-    }
-
-    setSelectedPreset(preset);
-    const presetData = getPresetData(preset);
-    setCurrentPreset(presetData);
-
-    setSessionType('work');
-    setTotalWorkSessions(0);
-    setCycleSessionsCompleted(0);
-    setCurrentCycle(1);
-    setCycleJustCompleted(false);
-
-    // Always use the preset's work duration for preset changes (not settings override)
-    const duration = presetData.work;
-    console.log('Setting timeLeft to preset duration:', duration * 60, 'seconds (', duration, 'minutes)');
-    setTimeLeft(duration * 60);
-  }, [isSessionActive, cancelSession, getPresetData]);
-
-  const handleCustomTimer = useCallback(async (customTimes: TimerPreset): Promise<void> => {
-    console.log('handleCustomTimer called with:', customTimes);
-    
-    if (!customTimes || !customTimes.work) {
-      console.log('Invalid custom timer configuration');
-      Alert.alert('Error', 'Invalid timer configuration');
-      return;
-    }
-    
-    try {
       if (isSessionActive) {
-        console.log('Cancelling active session before setting custom timer');
         await cancelSession();
       }
-      
-      console.log('Setting custom preset and resetting state');
-      setCurrentPreset(customTimes);
-      setSelectedPreset('custom');
 
-      setSessionType('work');
+      setSelectedPreset(preset);
+      const presetData = getPresetData(preset);
+      setCurrentPreset(presetData);
+
+      setSessionType("work");
       setTotalWorkSessions(0);
       setCycleSessionsCompleted(0);
       setCurrentCycle(1);
       setCycleJustCompleted(false);
 
-      const newTimeLeft = customTimes.work * 60;
-      console.log('Setting timeLeft to:', newTimeLeft, 'seconds (', customTimes.work, 'minutes)');
-      setTimeLeft(newTimeLeft);
-      
-      Alert.alert(
-        'Custom Timer Set!',
-        `Work sessions: ${customTimes.work}min\n` +
-        `Break sessions: ${customTimes.break}min\n` +
-        `Long break: ${customTimes.longBreak}min\n` +
-        `Long break after: ${customTimes.sessionsUntilLongBreak || 4} work sessions`
+      // Always use the preset's work duration for preset changes (not settings override)
+      const duration = presetData.work;
+      console.log(
+        "Setting timeLeft to preset duration:",
+        duration * 60,
+        "seconds (",
+        duration,
+        "minutes)"
       );
-    } catch (error) {
-      console.error('Error setting custom timer:', error);
-      Alert.alert('Error', 'Failed to set custom timer');
-    }
-  }, [isSessionActive, cancelSession]);
+      setTimeLeft(duration * 60);
+    },
+    [isSessionActive, cancelSession, getPresetData]
+  );
+
+  const handleCustomTimer = useCallback(
+    async (customTimes: TimerPreset): Promise<void> => {
+      console.log("handleCustomTimer called with:", customTimes);
+
+      if (!customTimes || !customTimes.work) {
+        console.log("Invalid custom timer configuration");
+        Alert.alert("Error", "Invalid timer configuration");
+        return;
+      }
+
+      try {
+        if (isSessionActive) {
+          console.log("Cancelling active session before setting custom timer");
+          await cancelSession();
+        }
+
+        console.log("Setting custom preset and resetting state");
+        setCurrentPreset(customTimes);
+        setSelectedPreset("custom");
+
+        setSessionType("work");
+        setTotalWorkSessions(0);
+        setCycleSessionsCompleted(0);
+        setCurrentCycle(1);
+        setCycleJustCompleted(false);
+
+        const newTimeLeft = customTimes.work * 60;
+        console.log(
+          "Setting timeLeft to:",
+          newTimeLeft,
+          "seconds (",
+          customTimes.work,
+          "minutes)"
+        );
+        setTimeLeft(newTimeLeft);
+
+        Alert.alert(
+          "Custom Timer Set!",
+          `Work sessions: ${customTimes.work}min\n` +
+            `Break sessions: ${customTimes.break}min\n` +
+            `Long break: ${customTimes.longBreak}min\n` +
+            `Long break after: ${
+              customTimes.sessionsUntilLongBreak || 4
+            } work sessions`
+        );
+      } catch (error) {
+        console.error("Error setting custom timer:", error);
+        Alert.alert("Error", "Failed to set custom timer");
+      }
+    },
+    [isSessionActive, cancelSession]
+  );
 
   return {
     // State
@@ -301,6 +379,6 @@ export const useTimerLogic = () => {
     resetTimer,
     stopTimer,
     changePreset,
-    handleCustomTimer
+    handleCustomTimer,
   };
 };
