@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    justifyContent: 'flex-start',
+    paddingTop: Platform.OS === 'ios' ? 170 : 160,
   },
   statusBarBackground: {
     position: 'absolute',

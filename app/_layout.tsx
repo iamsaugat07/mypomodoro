@@ -78,7 +78,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const REVENUE_CAT_API_KEY = "goog_TmQIvIdxKLtBORhNtcZzBTDVwLg";
+  const REVENUE_CAT_API_KEY = process.env.EXPO_PUBLIC_REVENUE_CAT_API_KEY || "";
 
   return (
     <AuthProvider>
