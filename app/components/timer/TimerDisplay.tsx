@@ -1,5 +1,5 @@
  import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { SessionType } from '../../../src/types';
 
 interface TimerDisplayProps {
@@ -10,6 +10,7 @@ interface TimerDisplayProps {
   currentCycle: number;
   cycleSessionsCompleted: number;
   sessionsUntilLongBreak: number;
+  isSmallScreen: boolean;
 }
 
 const TimerDisplay = ({
@@ -19,8 +20,11 @@ const TimerDisplay = ({
   workSessionDuration,
   currentCycle,
   cycleSessionsCompleted,
-  sessionsUntilLongBreak
+  sessionsUntilLongBreak,
+  isSmallScreen
 }: TimerDisplayProps) => {
+  const { width } = useWindowDimensions();
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -50,22 +54,38 @@ const TimerDisplay = ({
     }
   };
 
+  // Responsive font sizes
+  const fontSize = {
+    sessionType: isSmallScreen ? 20 : 24,
+    cycleInfo: isSmallScreen ? 16 : 18,
+    totalSessions: isSmallScreen ? 12 : 14,
+    timer: isSmallScreen ? Math.min(width * 0.18, 60) : Math.min(width * 0.18, 72),
+  };
+
   return (
     <>
       <View style={styles.header}>
-        <Text style={styles.sessionType}>
+        <Text style={[styles.sessionType, { fontSize: fontSize.sessionType }]}>
           {getSessionDisplayName()}
         </Text>
-        <Text style={styles.cycleInfo}>
+        <Text style={[styles.cycleInfo, { fontSize: fontSize.cycleInfo }]}>
           Cycle {currentCycle} - Session {cycleSessionsCompleted}/{sessionsUntilLongBreak}
         </Text>
-        <Text style={styles.totalSessions}>
+        <Text style={[styles.totalSessions, { fontSize: fontSize.totalSessions }]}>
           Total Time Worked: {formatTotalTime()}
         </Text>
       </View>
 
-      <View style={styles.timerContainer}>
-        <Text style={styles.timer}>{formatTime(timeLeft)}</Text>
+      <View style={[
+        styles.timerContainer,
+        {
+          paddingVertical: isSmallScreen ? 30 : 40,
+          paddingHorizontal: isSmallScreen ? 40 : 50,
+        }
+      ]}>
+        <Text style={[styles.timer, { fontSize: fontSize.timer }]}>
+          {formatTime(timeLeft)}
+        </Text>
       </View>
     </>
   );
@@ -74,36 +94,28 @@ const TimerDisplay = ({
 const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
-    marginBottom: 50,
   },
   sessionType: {
-    fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
     letterSpacing: 2,
     marginBottom: 10,
   },
   cycleInfo: {
-    fontSize: 18,
     fontWeight: '600',
     color: 'white',
     opacity: 0.9,
     marginBottom: 5,
   },
   totalSessions: {
-    fontSize: 14,
     color: 'white',
     opacity: 0.7,
   },
   timerContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
-    paddingVertical: 40,
-    paddingHorizontal: 50,
-    marginBottom: 50,
   },
   timer: {
-    fontSize: 72,
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
