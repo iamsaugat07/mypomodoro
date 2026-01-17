@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "statusBarStyle": "light",
     "newArchEnabled": true,
     "scheme": "pomodoroapp",
     "description": "A beautiful Pomodoro timer app to boost your productivity with Firebase sync across devices.",
