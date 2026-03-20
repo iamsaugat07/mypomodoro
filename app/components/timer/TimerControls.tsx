@@ -6,7 +6,7 @@ interface TimerControlsProps {
   isPaused: boolean;
   onToggleTimer: () => void;
   onResetTimer: () => void;
-  onStopTimer?: () => void; // Optional stop button (shown after cycle completion)
+  onStopTimer?: () => void;
   isSmallScreen: boolean;
 }
 
@@ -24,62 +24,36 @@ const TimerControls = ({
     return 'START';
   };
 
-  // Responsive button sizing
-  const buttonSize = {
-    paddingVertical: isSmallScreen ? 12 : 15,
-    paddingHorizontal: isSmallScreen ? 25 : 30,
-    fontSize: isSmallScreen ? 16 : 18,
-  };
+  const fontSize = isSmallScreen ? 16 : 17;
+  const paddingV = isSmallScreen ? 14 : 16;
 
   return (
-    <View style={[styles.controls, { gap: isSmallScreen ? 15 : 20 }]}>
+    <View style={[styles.controls, { gap: isSmallScreen ? 14 : 16 }]}>
       <TouchableOpacity
-        style={[
-          styles.button,
-          styles.primaryButton,
-          {
-            paddingVertical: buttonSize.paddingVertical,
-            paddingHorizontal: buttonSize.paddingHorizontal,
-          }
-        ]}
+        style={[styles.primaryButton, { paddingVertical: paddingV }]}
         onPress={onToggleTimer}
+        activeOpacity={0.85}
       >
-        <Text style={[styles.buttonText, { fontSize: buttonSize.fontSize }]}>
+        <Text style={[styles.primaryText, { fontSize }]}>
           {getButtonText()}
         </Text>
       </TouchableOpacity>
 
       {onStopTimer ? (
         <TouchableOpacity
-          style={[
-            styles.button,
-            styles.stopButton,
-            {
-              paddingVertical: buttonSize.paddingVertical,
-              paddingHorizontal: buttonSize.paddingHorizontal,
-            }
-          ]}
+          style={[styles.secondaryButton, { paddingVertical: paddingV }]}
           onPress={onStopTimer}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.secondaryButtonText, { fontSize: buttonSize.fontSize }]}>
-            STOP
-          </Text>
+          <Text style={[styles.secondaryText, { fontSize }]}>STOP</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[
-            styles.button,
-            styles.secondaryButton,
-            {
-              paddingVertical: buttonSize.paddingVertical,
-              paddingHorizontal: buttonSize.paddingHorizontal,
-            }
-          ]}
+          style={[styles.secondaryButton, { paddingVertical: paddingV }]}
           onPress={onResetTimer}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.secondaryButtonText, { fontSize: buttonSize.fontSize }]}>
-            RESET
-          </Text>
+          <Text style={[styles.secondaryText, { fontSize }]}>RESET</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -89,30 +63,33 @@ const TimerControls = ({
 const styles = StyleSheet.create({
   controls: {
     flexDirection: 'row',
-  },
-  button: {
-    borderRadius: 30,
-    minWidth: 100,
     alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: 'white',
+    borderRadius: 32,
+    minWidth: 148,
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  primaryText: {
+    fontWeight: '700',
+    color: '#333',
+    letterSpacing: 1,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
+    borderRadius: 32,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    minWidth: 112,
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  stopButton: {
-    backgroundColor: 'rgba(255, 0, 0, 0.7)',
-  },
-  buttonText: {
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  secondaryButtonText: {
-    fontWeight: 'bold',
+  secondaryText: {
+    fontWeight: '700',
     color: 'white',
+    letterSpacing: 1,
   },
 });
 

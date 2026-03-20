@@ -1,4 +1,4 @@
- import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { SessionType } from '../../../src/types';
 
@@ -6,7 +6,7 @@ interface TimerDisplayProps {
   timeLeft: number;
   sessionType: SessionType;
   totalWorkSessions: number;
-  workSessionDuration: number; // Duration in minutes for one work session
+  workSessionDuration: number;
   currentCycle: number;
   cycleSessionsCompleted: number;
   sessionsUntilLongBreak: number;
@@ -35,14 +35,9 @@ const TimerDisplay = ({
     const totalMinutes = totalWorkSessions * workSessionDuration;
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-
-    if (hours === 0) {
-      return `${minutes}min`;
-    } else if (minutes === 0) {
-      return `${hours}h`;
-    } else {
-      return `${hours}h ${minutes}min`;
-    }
+    if (hours === 0) return `${minutes}min`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}min`;
   };
 
   const getSessionDisplayName = (): string => {
@@ -54,36 +49,40 @@ const TimerDisplay = ({
     }
   };
 
-  // Responsive font sizes
-  const fontSize = {
-    sessionType: isSmallScreen ? 20 : 24,
-    cycleInfo: isSmallScreen ? 16 : 18,
-    totalSessions: isSmallScreen ? 12 : 14,
-    timer: isSmallScreen ? Math.min(width * 0.18, 60) : Math.min(width * 0.18, 72),
-  };
+  const timerFontSize = isSmallScreen
+    ? Math.min(width * 0.20, 70)
+    : Math.min(width * 0.22, 82);
 
   return (
     <>
       <View style={styles.header}>
-        <Text style={[styles.sessionType, { fontSize: fontSize.sessionType }]}>
+        <Text style={[styles.sessionType, { fontSize: isSmallScreen ? 13 : 14 }]}>
           {getSessionDisplayName()}
         </Text>
-        <Text style={[styles.cycleInfo, { fontSize: fontSize.cycleInfo }]}>
-          Cycle {currentCycle} - Session {cycleSessionsCompleted}/{sessionsUntilLongBreak}
+        <Text style={[styles.cycleInfo, { fontSize: isSmallScreen ? 22 : 26 }]}>
+          Cycle {currentCycle} · Session {cycleSessionsCompleted}/{sessionsUntilLongBreak}
         </Text>
-        <Text style={[styles.totalSessions, { fontSize: fontSize.totalSessions }]}>
-          Total Time Worked: {formatTotalTime()}
+        <View style={styles.dotsRow}>
+          {Array.from({ length: sessionsUntilLongBreak }).map((_, i) => (
+            <View
+              key={i}
+              style={[styles.dot, i < cycleSessionsCompleted ? styles.dotFilled : styles.dotEmpty]}
+            />
+          ))}
+        </View>
+        <Text style={[styles.totalSessions, { fontSize: isSmallScreen ? 12 : 13 }]}>
+          Total worked: {formatTotalTime()}
         </Text>
       </View>
 
       <View style={[
         styles.timerContainer,
         {
-          paddingVertical: isSmallScreen ? 30 : 40,
-          paddingHorizontal: isSmallScreen ? 40 : 50,
+          paddingVertical: isSmallScreen ? 22 : 28,
+          paddingHorizontal: isSmallScreen ? 36 : 48,
         }
       ]}>
-        <Text style={[styles.timer, { fontSize: fontSize.timer }]}>
+        <Text style={[styles.timer, { fontSize: timerFontSize }]}>
           {formatTime(timeLeft)}
         </Text>
       </View>
@@ -94,31 +93,53 @@ const TimerDisplay = ({
 const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
+    gap: 6,
   },
   sessionType: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: 'white',
-    letterSpacing: 2,
-    marginBottom: 10,
+    letterSpacing: 3,
+    opacity: 0.75,
+    textTransform: 'uppercase',
   },
   cycleInfo: {
-    fontWeight: '600',
+    fontWeight: '700',
     color: 'white',
-    opacity: 0.9,
-    marginBottom: 5,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 2,
+  },
+  dot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+  },
+  dotFilled: {
+    backgroundColor: 'white',
+  },
+  dotEmpty: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.55)',
   },
   totalSessions: {
     color: 'white',
-    opacity: 0.7,
+    opacity: 0.6,
+    marginTop: 2,
   },
   timerContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
   },
   timer: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: 'white',
     textAlign: 'center',
+    letterSpacing: 2,
   },
 });
 

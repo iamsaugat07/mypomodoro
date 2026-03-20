@@ -10,17 +10,18 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/providers/auth';
 import { ManageSubscription } from '../components/subscription/ManageSubscription';
 import { UserSettings } from '../../src/types';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
-    // Initialize default settings
     setSettings({
       notifications: true,
       autoStartBreaks: false,
@@ -33,7 +34,6 @@ export default function Settings() {
   }, []);
 
   const handleSettingChange = async (key: string, value: boolean) => {
-    // Simplified for now - you can implement Firebase update logic here
     setSettings(prev => prev ? { ...prev, [key]: value } : null);
   };
 
@@ -84,18 +84,20 @@ export default function Settings() {
     );
   };
 
-  const SettingItem = ({ 
-    title, 
-    description, 
+  const SettingItem = ({
+    title,
+    description,
     settingKey,
-    value
+    value,
+    isLast = false,
   }: {
     title: string;
     description: string;
     settingKey: string;
     value: boolean;
+    isLast?: boolean;
   }) => (
-    <View style={styles.settingItem}>
+    <View style={[styles.settingItem, isLast && styles.settingItemLast]}>
       <View style={styles.settingText}>
         <Text style={styles.settingTitle}>{title}</Text>
         <Text style={styles.settingDescription}>{description}</Text>
@@ -104,8 +106,7 @@ export default function Settings() {
         value={value}
         onValueChange={(newValue) => handleSettingChange(settingKey, newValue)}
         trackColor={{ false: '#e0e0e0', true: '#e74c3c' }}
-        thumbColor={value ? '#ffffff' : '#f4f3f4'}
-        disabled={false}
+        thumbColor="#ffffff"
       />
     </View>
   );
@@ -120,82 +121,85 @@ export default function Settings() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.profileSection}>
-          {user?.photoURL ? (
-            <View style={styles.avatar}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.profileRow}>
+          <View style={styles.avatar}>
+            {user?.displayName ? (
               <Text style={styles.avatarText}>
-                {user.displayName?.charAt(0).toUpperCase() || '👤'}
+                {user.displayName.charAt(0).toUpperCase()}
               </Text>
-            </View>
-          ) : (
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={24} color="#666" />
-            </View>
-          )}
+            ) : (
+              <Ionicons name="person" size={26} color="#999" />
+            )}
+          </View>
           <View style={styles.profileInfo}>
             <Text style={styles.userName}>{user?.displayName || 'Anonymous'}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
           </View>
         </View>
+
         <Text style={styles.headerTitle}>Settings</Text>
         <Text style={styles.headerSubtitle}>Customize your Pomodoro experience</Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        
+      {/* Notifications */}
+      <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+      <View style={styles.card}>
         <SettingItem
           title="Enable Notifications"
           description="Get notified when sessions complete"
           settingKey="notifications"
           value={settings?.notifications ?? true}
+          isLast
         />
       </View>
 
-      {/* Subscription Management */}
-      <ManageSubscription />
+      {/* Subscription */}
+      <Text style={styles.sectionLabel}>SUBSCRIPTION</Text>
+      <ManageSubscription showTitle={false} style={styles.subscriptionCard} />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Auto-Start</Text>
-        
+      {/* Auto-Start */}
+      <Text style={styles.sectionLabel}>AUTO-START</Text>
+      <View style={styles.card}>
         <SettingItem
           title="Auto-start Breaks"
           description="Automatically start break timers"
           settingKey="autoStartBreaks"
           value={settings?.autoStartBreaks ?? false}
         />
-        
         <SettingItem
           title="Auto-start Pomodoros"
           description="Automatically start work sessions after breaks"
           settingKey="autoStartPomodoros"
           value={settings?.autoStartPomodoros ?? false}
+          isLast
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        
-        <TouchableOpacity style={[styles.button, styles.signOutButton]} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color="white" />
-          <Text style={styles.buttonText}>Sign Out</Text>
+      {/* Account */}
+      <Text style={styles.sectionLabel}>ACCOUNT</Text>
+      <View style={styles.card}>
+        <TouchableOpacity style={styles.actionRow} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color="#e74c3c" />
+          <Text style={[styles.actionText, { color: '#e74c3c' }]}>Sign Out</Text>
+        </TouchableOpacity>
+        <View style={styles.divider} />
+        <TouchableOpacity style={styles.actionRow} onPress={handleReset}>
+          <Ionicons name="refresh-outline" size={20} color="#999" />
+          <Text style={[styles.actionText, { color: '#999' }]}>Reset All Settings</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Data</Text>
-        
-        <TouchableOpacity style={styles.button} onPress={handleReset}>
-          <Text style={styles.buttonText}>Reset All Settings</Text>
-        </TouchableOpacity>
-      </View>
-
+      {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Pomodoro Timer v1.0.0</Text>
-        <Text style={styles.footerText}>Built with React Native & Expo + Firebase</Text>
-        <Text style={styles.footerText}>User: {user?.uid?.slice(0, 8)}...</Text>
+        <Text style={styles.footerText}>Pomodoro Timer · v1.0.0</Text>
+        <Text style={styles.footerText}>Built with React Native & Expo</Text>
       </View>
     </ScrollView>
   );
@@ -204,124 +208,129 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F2F2F7',
   },
   header: {
     backgroundColor: 'white',
-    padding: 24,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  section: {
-    backgroundColor: 'white',
-    marginTop: 20,
-    paddingVertical: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  settingText: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
     paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#EBEBEB',
+    marginBottom: 8,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f0f0f0',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#e74c3c',
   },
   profileInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: '#1C1C1E',
+    marginBottom: 3,
   },
   userEmail: {
     fontSize: 14,
-    color: '#666',
+    color: '#8E8E93',
   },
-  button: {
-    backgroundColor: '#e74c3c',
-    marginHorizontal: 24,
-    marginVertical: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+  headerTitle: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginBottom: 3,
   },
-  signOutButton: {
-    backgroundColor: '#666',
+  headerSubtitle: {
+    fontSize: 15,
+    color: '#8E8E93',
   },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
+  sectionLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    marginLeft: 8,
+    color: '#8E8E93',
+    letterSpacing: 0.8,
+    marginHorizontal: 24,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  card: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  subscriptionCard: {
+    marginHorizontal: 0,
+    paddingHorizontal: 16,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
+  },
+  settingItemLast: {
+    borderBottomWidth: 0,
+  },
+  settingText: {
+    flex: 1,
+    marginRight: 12,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1C1C1E',
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: '#8E8E93',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    gap: 12,
+  },
+  actionText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E5EA',
+    marginLeft: 48,
   },
   footer: {
     alignItems: 'center',
-    padding: 24,
-    marginTop: 20,
+    paddingTop: 32,
+    gap: 4,
   },
   footerText: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 4,
+    fontSize: 13,
+    color: '#C7C7CC',
   },
 });

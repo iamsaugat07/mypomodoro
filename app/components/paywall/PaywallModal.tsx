@@ -384,6 +384,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 8,
+    paddingRight: 30,
   },
   planTitleRow: {
     flexDirection: 'row',

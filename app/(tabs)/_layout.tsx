@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import { StyleSheet } from "react-native";
 
 export default function TabLayout() {
   return (
@@ -8,9 +9,10 @@ export default function TabLayout() {
         tabBarActiveTintColor: "#e74c3c",
         tabBarInactiveTintColor: "#8e8e93",
         tabBarStyle: {
-          backgroundColor: "white",
-          borderTopWidth: 1,
-          borderTopColor: "#e0e0e0",
+          position: "absolute",
+          backgroundColor: "rgba(255,255,255,0.92)",
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: "rgba(0,0,0,0.12)",
         },
         headerShown: false,
       }}

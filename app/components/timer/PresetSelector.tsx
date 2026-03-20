@@ -28,78 +28,60 @@ const PresetSelector = ({
     }
   };
 
-  // Responsive sizing for preset buttons
-  const presetSize = {
-    buttonPadding: isSmallScreen ? 10 : 12,
-    titleFontSize: isSmallScreen ? 14 : 16,
-    nameFontSize: isSmallScreen ? 11 : 12,
-    timeFontSize: isSmallScreen ? 10 : 11,
-    cycleFontSize: isSmallScreen ? 8 : 9,
-    gap: isSmallScreen ? 8 : 10,
-    minWidth: Math.min((width - 60) / 4.5, 80), // Responsive button width
-  };
+  const cardWidth = Math.min((width - 60) / 4.2, 82);
+  const nameFontSize = isSmallScreen ? 12 : 13;
+  const subFontSize = isSmallScreen ? 10 : 11;
 
   return (
     <View style={styles.presets}>
-      <Text style={[styles.presetsTitle, { fontSize: presetSize.titleFontSize }]}>
-        Timer Presets
+      <Text style={[styles.presetsTitle, { fontSize: isSmallScreen ? 11 : 12 }]}>
+        TIMER PRESETS
       </Text>
-      <View style={[styles.presetButtons, { gap: presetSize.gap }]}>
-        {Object.keys(presets).map((preset) => (
-          <TouchableOpacity
-            key={preset}
-            style={[
-              styles.presetButton,
-              selectedPreset === preset && styles.activePresetButton,
-              {
-                paddingVertical: presetSize.buttonPadding,
-                paddingHorizontal: presetSize.buttonPadding,
-                minWidth: presetSize.minWidth,
-              }
-            ]}
-            onPress={() => onPresetChange(preset)}
-          >
-            <Text style={[
-              styles.presetButtonText,
-              selectedPreset === preset && styles.activePresetButtonText,
-              { fontSize: presetSize.nameFontSize }
-            ]}>
-              {getPresetDisplayName(preset)}
-            </Text>
-            <Text style={[
-              styles.presetTimeText,
-              selectedPreset === preset && styles.activePresetButtonText,
-              { fontSize: presetSize.timeFontSize }
-            ]}>
-              {presets[preset].work}m work
-            </Text>
-            <Text style={[
-              styles.presetCycleText,
-              selectedPreset === preset && styles.activePresetButtonText,
-              { fontSize: presetSize.cycleFontSize }
-            ]}>
-              {presets[preset].sessionsUntilLongBreak || 4} sessions
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={[styles.presetButtons, { gap: isSmallScreen ? 8 : 10 }]}>
+        {Object.keys(presets).map((preset) => {
+          const isActive = selectedPreset === preset;
+          return (
+            <TouchableOpacity
+              key={preset}
+              style={[
+                styles.presetButton,
+                isActive && styles.activePresetButton,
+                { width: cardWidth },
+              ]}
+              onPress={() => onPresetChange(preset)}
+              activeOpacity={0.75}
+            >
+              <Text style={[
+                styles.presetName,
+                isActive && styles.activeText,
+                { fontSize: nameFontSize },
+              ]}>
+                {getPresetDisplayName(preset)}
+              </Text>
+              <Text style={[
+                styles.presetSub,
+                isActive && styles.activeSubText,
+                { fontSize: subFontSize },
+              ]}>
+                {presets[preset].work}m work
+              </Text>
+              <Text style={[
+                styles.presetSub,
+                isActive && styles.activeSubText,
+                { fontSize: subFontSize },
+              ]}>
+                {presets[preset].sessionsUntilLongBreak || 4} sessions
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
         <TouchableOpacity
-          style={[
-            styles.presetButton,
-            styles.customButton,
-            {
-              paddingVertical: presetSize.buttonPadding,
-              paddingHorizontal: presetSize.buttonPadding,
-              minWidth: presetSize.minWidth,
-            }
-          ]}
+          style={[styles.presetButton, styles.customButton, { width: cardWidth }]}
           onPress={onCustomPreset}
+          activeOpacity={0.75}
         >
-          <Text style={[styles.presetButtonText, { fontSize: presetSize.nameFontSize }]}>
-            Custom
-          </Text>
-          <Text style={[styles.presetTimeText, { fontSize: presetSize.timeFontSize }]}>
-            +
-          </Text>
+          <Text style={[styles.presetName, { fontSize: nameFontSize }]}>Custom</Text>
+          <Text style={[styles.presetSub, { fontSize: nameFontSize + 2 }]}>+</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -113,43 +95,45 @@ const styles = StyleSheet.create({
   },
   presetsTitle: {
     color: 'white',
-    marginBottom: 15,
-    opacity: 0.8,
+    letterSpacing: 2,
+    opacity: 0.6,
+    marginBottom: 12,
+    fontWeight: '600',
   },
   presetButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
   },
   presetButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    gap: 3,
   },
   activePresetButton: {
     backgroundColor: 'white',
-  },
-  presetButtonText: {
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 2,
-  },
-  presetTimeText: {
-    color: 'white',
-    opacity: 0.8,
-    marginBottom: 2,
-  },
-  presetCycleText: {
-    color: 'white',
-    opacity: 0.7,
-  },
-  activePresetButtonText: {
-    color: '#333',
+    borderColor: 'white',
   },
   customButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderStyle: 'dashed',
+  },
+  presetName: {
+    fontWeight: '700',
+    color: 'white',
+  },
+  presetSub: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  activeText: {
+    color: '#333',
+  },
+  activeSubText: {
+    color: 'rgba(0, 0, 0, 0.5)',
   },
 });
 

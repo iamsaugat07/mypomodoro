@@ -33,49 +33,44 @@ export default function TimerScreen() {
     handleCustomTimer
   } = useTimerLogic();
 
-  // Responsive spacing based on screen height
   const isSmallScreen = height < 700;
-  const spacing = {
-    topPadding: height * 0.12, // 12% of screen height
-    contentGap: isSmallScreen ? height * 0.03 : height * 0.04, // 3-4% gaps
-    bottomPadding: isSmallScreen ? 30 : 50,
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: sessionColor }]}>
       <StatusBar style="light" />
-      <View style={[styles.statusBarBackground, { backgroundColor: sessionColor, height: insets.top }]} />
 
-      <View style={[styles.content, { paddingTop: spacing.topPadding, gap: spacing.contentGap }]}>
-        <TimerDisplay
-          timeLeft={timeLeft}
-          sessionType={sessionType}
-          totalWorkSessions={totalWorkSessions}
-          workSessionDuration={currentPreset.work}
-          currentCycle={currentCycle}
-          cycleSessionsCompleted={cycleSessionsCompleted}
-          sessionsUntilLongBreak={currentPreset.sessionsUntilLongBreak || 4}
-          isSmallScreen={isSmallScreen}
-        />
+      <View style={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 72 }]}>
+        <View style={[styles.timerGroup, { gap: isSmallScreen ? 24 : 32 }]}>
+          <TimerDisplay
+            timeLeft={timeLeft}
+            sessionType={sessionType}
+            totalWorkSessions={totalWorkSessions}
+            workSessionDuration={currentPreset.work}
+            currentCycle={currentCycle}
+            cycleSessionsCompleted={cycleSessionsCompleted}
+            sessionsUntilLongBreak={currentPreset.sessionsUntilLongBreak || 4}
+            isSmallScreen={isSmallScreen}
+          />
 
-        <TimerControls
-          isSessionActive={isSessionActive}
-          isPaused={isPaused}
-          onToggleTimer={toggleTimer}
-          onResetTimer={resetTimer}
-          onStopTimer={cycleJustCompleted ? stopTimer : undefined}
-          isSmallScreen={isSmallScreen}
-        />
-      </View>
+          <TimerControls
+            isSessionActive={isSessionActive}
+            isPaused={isPaused}
+            onToggleTimer={toggleTimer}
+            onResetTimer={resetTimer}
+            onStopTimer={cycleJustCompleted ? stopTimer : undefined}
+            isSmallScreen={isSmallScreen}
+          />
+        </View>
 
-      <View style={[styles.presetContainer, { paddingBottom: spacing.bottomPadding }]}>
-        <PresetSelector
-          presets={timerPresets}
-          selectedPreset={selectedPreset}
-          onPresetChange={changePreset}
-          onCustomPreset={() => setShowCustomModal(true)}
-          isSmallScreen={isSmallScreen}
-        />
+        <View style={styles.presetContainer}>
+          <PresetSelector
+            presets={timerPresets}
+            selectedPreset={selectedPreset}
+            onPresetChange={changePreset}
+            onCustomPreset={() => setShowCustomModal(true)}
+            isSmallScreen={isSmallScreen}
+          />
+        </View>
       </View>
 
       <CustomTimerModal
@@ -91,20 +86,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  statusBarBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
   content: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-evenly',
     paddingHorizontal: 20,
+  },
+  timerGroup: {
+    alignItems: 'center',
   },
   presetContainer: {
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
 });

@@ -307,7 +307,7 @@ export const ManageSubscription = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 10,
+    paddingHorizontal: 0,
   },
   title: {
     fontSize: 20,
@@ -318,11 +318,11 @@ const styles = StyleSheet.create({
   
   // Free user styles
   freeUserCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'white',
     borderRadius: 12,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
+    marginHorizontal: 16,
+    overflow: 'hidden',
   },
   freeUserHeader: {
     flexDirection: 'row',
@@ -394,8 +394,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#E8F5E8',
+    marginHorizontal: 16,
+    overflow: 'hidden',
   },
   statusHeader: {
     flexDirection: 'row',
